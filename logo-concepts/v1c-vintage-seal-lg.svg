@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg1clg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a8a6e"/>
+      <stop offset="100%" style="stop-color:#145c4a"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#bg1clg)"/>
+
+  <!-- Background house silhouette -->
+  <path d="M256 100 L400 220 L400 400 L310 400 L310 300 L202 300 L202 400 L112 400 L112 220 Z"
+        fill="white" opacity="0.08"/>
+
+  <!-- Bank check -->
+  <g transform="translate(256,260) rotate(-5)">
+    <rect x="-140" y="-75" width="280" height="150" rx="12" fill="white" opacity="0.95"/>
+    <line x1="-110" y1="-40" x2="40" y2="-40" stroke="#1a8a6e" stroke-width="3" opacity="0.25"/>
+    <line x1="-110" y1="-15" x2="80" y2="-15" stroke="#1a8a6e" stroke-width="3" opacity="0.25"/>
+    <line x1="-110" y1="10" x2="60" y2="10" stroke="#1a8a6e" stroke-width="3" opacity="0.25"/>
+    <rect x="60" y="-50" width="70" height="30" rx="4" fill="#1a8a6e" opacity="0.08"/>
+    <text x="95" y="-30" font-family="Arial,sans-serif" font-size="18" font-weight="bold" fill="#1a8a6e" text-anchor="middle">&#8362;</text>
+    <line x1="-110" y1="50" x2="110" y2="50" stroke="#1a8a6e" stroke-width="2" opacity="0.15" stroke-dasharray="8,4"/>
+  </g>
+
+  <!-- Vintage wax seal — LARGER, bolder, higher contrast -->
+  <g transform="translate(350,150)">
+    <!-- Wax seal body -->
+    <circle cx="0" cy="0" r="95" fill="#6b0f0f"/>
+    <circle cx="0" cy="0" r="90" fill="#8b1a1a"/>
+    <circle cx="0" cy="0" r="84" fill="#a52a2a"/>
+    <!-- Inner gold borders -->
+    <circle cx="0" cy="0" r="72" fill="none" stroke="#edc07a" stroke-width="3"/>
+    <circle cx="0" cy="0" r="66" fill="none" stroke="#edc07a" stroke-width="1.5" opacity="0.6"/>
+    <!-- Arabic text — bigger, brighter gold, full opacity -->
+    <text x="0" y="-8" font-family="'Traditional Arabic','Simplified Arabic','Arial'" font-size="44" font-weight="bold" fill="#f0d090" text-anchor="middle" direction="rtl">دار</text>
+    <text x="0" y="40" font-family="'Traditional Arabic','Simplified Arabic','Arial'" font-size="44" font-weight="bold" fill="#f0d090" text-anchor="middle" direction="rtl">جدّي</text>
+    <!-- Decorative stars -->
+    <text x="-50" y="6" font-size="14" fill="#edc07a" opacity="0.8">&#9733;</text>
+    <text x="42" y="6" font-size="14" fill="#edc07a" opacity="0.8">&#9733;</text>
+    <text x="-3" y="-48" font-size="14" fill="#edc07a" opacity="0.8">&#9733;</text>
+    <text x="-3" y="66" font-size="14" fill="#edc07a" opacity="0.8">&#9733;</text>
+  </g>
+
+  <!-- House roof (top-left) -->
+  <g transform="translate(150,115)">
+    <path d="M0,-42 L52,5 L42,5 L42,38 L14,38 L14,13 L-14,13 L-14,38 L-42,38 L-42,5 L-52,5 Z"
+          fill="white"/>
+  </g>
+
+  <!-- Checkmark badge (bottom-right) -->
+  <circle cx="385" cy="400" r="46" fill="#16a34a"/>
+  <circle cx="385" cy="400" r="42" fill="#22c55e"/>
+  <polyline points="363,400 378,415 407,383" fill="none" stroke="white" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
