@@ -1,5 +1,38 @@
 import { GAS_URL } from "../config";
 
+// ═══════════════════════════════════════════
+// API response caching (stale-while-revalidate)
+// ═══════════════════════════════════════════
+
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+function getCached(key) {
+  try {
+    const raw = localStorage.getItem("api_cache_" + key);
+    if (!raw) return null;
+    const { data, ts } = JSON.parse(raw);
+    if (Date.now() - ts > CACHE_TTL) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+function setCache(key, data) {
+  try {
+    localStorage.setItem("api_cache_" + key, JSON.stringify({ data, ts: Date.now() }));
+  } catch { /* storage full — ignore */ }
+}
+
+function clearApiCache() {
+  const keys = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k.startsWith("api_cache_")) keys.push(k);
+  }
+  keys.forEach((k) => localStorage.removeItem(k));
+}
+
 /**
  * Makes a request to the Google Apps Script backend.
  * Retries up to 3 times on corrupted responses (common on mobile
@@ -54,9 +87,9 @@ export async function gasRequest(action, data = {}, retries = 3) {
       if (err.message === "Token expired" || err.message === "Not authenticated") {
         throw err;
       }
-      // Wait briefly before retrying
+      // Wait briefly before retrying (300ms base instead of 500ms)
       if (attempt < retries - 1) {
-        await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+        await new Promise((r) => setTimeout(r, 300 * (attempt + 1)));
       }
     }
   }
@@ -92,49 +125,56 @@ async function getGeminiKey() {
 }
 
 /**
- * Calls Gemini to extract check data AND crop coordinates in parallel.
- * Two separate focused calls are more reliable than one complex prompt.
+ * Calls Gemini to extract check data. Single call (no crop).
+ * Accepts optional prefillHints from prior checks in the bundle.
  */
-async function callGeminiDirect(base64Data, mimeType) {
+async function callGeminiDirect(base64Data, mimeType, prefillHints) {
   const apiKey = await getGeminiKey();
   const model = "gemini-2.5-flash";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   const inlineData = { mimeType, data: base64Data };
 
-  // Two parallel calls: extraction + crop
-  const [extractResult, cropResult] = await Promise.all([
-    callGemini(url, inlineData, [
-      "Extract data from this Israeli bank check (שיק).",
-      "Return ONLY a JSON object (empty string if unreadable):",
-      '{"amount":"3500","deposit_date":"2025-03-15","check_number":"1234567","bank_branch":"Hapoalim 123","account_number":"987654"}',
-      "amount = number only, no ₪. deposit_date = YYYY-MM-DD.",
-    ].join("\n")),
-    callGemini(url, inlineData, [
-      "Find the bank check in this photo.",
-      "Return ONLY a JSON object with the check bounding box as percentage of image (0-100):",
-      '{"top":"5","left":"3","width":"90","height":"55"}',
-    ].join("\n")),
-  ]);
+  const promptLines = [
+    "Extract data from this Israeli bank check (שיק) photo.",
+    "",
+    "Israeli check layout guide:",
+    "- TOP-RIGHT: issuer/drawer (printed org name) — this is who WROTE the check, NOT the payee",
+    "- TOP-LEFT: date field",
+    "- MIDDLE: payee line (לפקודת) — THIS is the payee, the person/entity the check is made out to",
+    "- CENTER: amount in digits and words",
+    "- BOTTOM: MICR line containing bank code, branch number, account number, check number",
+    "- NOTE: check may have a receipt stub (ספח) attached at the top — IGNORE it, focus only on the check portion below",
+    "",
+    "Return ONLY a JSON object with these fields (use empty string if unreadable):",
+    '{"amount":"3500","deposit_date":"2025-03-15","check_number":"1234567","bank_branch":"12-345","account_number":"987654","payee_name":"שם הנפרע"}',
+    "",
+    "Rules:",
+    "- amount: digits only, no ₪ symbol, no commas",
+    "- deposit_date: YYYY-MM-DD format",
+    "- check_number: from MICR line at bottom",
+    "- bank_branch: format as 'bank_code-branch_number' from MICR line",
+    "- account_number: from MICR line",
+    "- payee_name: from the לפקודת line (the payee), NOT the issuer/drawer printed at top-right",
+  ];
+
+  if (prefillHints) {
+    promptLines.push("");
+    promptLines.push("Previous checks in this bundle had these values — use them unless clearly different on this check:");
+    if (prefillHints.bank_branch) promptLines.push(`- bank_branch: "${prefillHints.bank_branch}"`);
+    if (prefillHints.account_number) promptLines.push(`- account_number: "${prefillHints.account_number}"`);
+  }
+
+  const extractResult = await callGemini(url, inlineData, promptLines.join("\n"));
 
   // Normalize extraction
   if (extractResult.amount) {
     extractResult.amount = String(extractResult.amount).replace(/[^\d.]/g, "");
   }
-  const fields = ["amount", "deposit_date", "check_number", "bank_branch", "account_number"];
+  const fields = ["amount", "deposit_date", "check_number", "bank_branch", "account_number", "payee_name"];
   for (const f of fields) {
     if (!extractResult[f]) extractResult[f] = "";
   }
-  // payee_name intentionally left out — pre-filled from bundle family name
-  if (!extractResult.payee_name) extractResult.payee_name = "";
-
-  // Attach crop data
-  extractResult._crop = {
-    top: parseFloat(cropResult.top) || 0,
-    left: parseFloat(cropResult.left) || 0,
-    width: parseFloat(cropResult.width) || 100,
-    height: parseFloat(cropResult.height) || 100,
-  };
 
   return extractResult;
 }
@@ -167,39 +207,26 @@ async function callGemini(url, inlineData, prompt) {
   try { return JSON.parse(match[0]); } catch { return {}; }
 }
 
-/**
- * Crops a base64 image using percentage-based coordinates.
- */
-function cropImage(dataUrl, crop) {
-  return new Promise((resolve) => {
-    if (!crop || crop.width >= 99) {
-      const base64 = dataUrl.split(",")[1];
-      resolve({ base64, mimeType: "image/jpeg", dataUrl });
-      return;
-    }
-    const img = new Image();
-    img.onload = () => {
-      const sx = Math.round((crop.left / 100) * img.width);
-      const sy = Math.round((crop.top / 100) * img.height);
-      const sw = Math.min(Math.round((crop.width / 100) * img.width), img.width - sx);
-      const sh = Math.min(Math.round((crop.height / 100) * img.height), img.height - sy);
-      const canvas = document.createElement("canvas");
-      canvas.width = sw;
-      canvas.height = sh;
-      canvas.getContext("2d").drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
-      const croppedUrl = canvas.toDataURL("image/jpeg", 0.85);
-      const base64 = croppedUrl.split(",")[1];
-      resolve({ base64, mimeType: "image/jpeg", dataUrl: croppedUrl });
-    };
-    img.src = dataUrl;
-  });
-}
-
 // ═══════════════════════════════════════════
 
 export const api = {
-  // Dashboard
-  dashboard: () => gasRequest("dashboard"),
+  // User info (lightweight — used by AuthContext)
+  getUserInfo: () => gasRequest("get_user_info"),
+
+  // Dashboard (with stale-while-revalidate caching)
+  dashboard: async () => {
+    const cached = getCached("dashboard");
+    const fetchFresh = gasRequest("dashboard").then((result) => {
+      setCache("dashboard", result);
+      return result;
+    });
+    if (cached) {
+      // Return cached immediately, refresh in background
+      fetchFresh.catch(() => {});
+      return cached;
+    }
+    return fetchFresh;
+  },
 
   // Bundles
   bundles: () => gasRequest("bundles"),
@@ -214,14 +241,11 @@ export const api = {
     gasRequest("advance_check", { check_id: checkId, recipient_name: recipientName }),
   deleteCheck: (checkId) => gasRequest("delete_check", { check_id: checkId }),
 
-  // Scan flow — Step 1: call Gemini DIRECTLY from browser (no GAS redirect issues)
-  // Returns { extracted, croppedImage } where croppedImage replaces the original
-  scanCheck: async (bundleId, base64Data, mimeType, originalDataUrl) => {
-    const extracted = await callGeminiDirect(base64Data, mimeType);
-    // Crop the image to just the check using Gemini's coordinates
-    const croppedImage = await cropImage(originalDataUrl, extracted._crop);
-    delete extracted._crop;
-    return { extracted, croppedImage };
+  // Scan flow — Step 1: call Gemini DIRECTLY from browser (single call, no crop)
+  // Accepts optional prefillHints { bank_branch, account_number } from prior checks
+  scanCheck: async (bundleId, base64Data, mimeType, prefillHints) => {
+    const extracted = await callGeminiDirect(base64Data, mimeType, prefillHints);
+    return { extracted };
   },
 
   // Scan flow — Step 2: confirm and save through GAS (image + data for Drive upload)
@@ -237,4 +261,12 @@ export const api = {
   users: () => gasRequest("users"),
   addUser: (data) => gasRequest("add_user", { data }),
   removeUser: (userId) => gasRequest("remove_user", { user_id: userId }),
+
+  // Settings
+  getSettings: () => gasRequest("get_settings"),
+  updateSetting: (key, value) => gasRequest("update_setting", { key, value }),
+  uploadLogo: (base64Data, mimeType) => gasRequest("upload_logo", { image_data: base64Data, mime_type: mimeType }),
+
+  // Logout cleanup
+  clearCache: clearApiCache,
 };

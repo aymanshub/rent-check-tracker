@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { LangProvider } from "./contexts/LangContext";
 import Navbar from "./components/Navbar";
@@ -11,18 +11,26 @@ import SettingsPage from "./pages/SettingsPage";
 import { api } from "./services/api";
 
 function AppContent() {
-  const { user, loading } = useAuth();
+  const { user, isAdmin, loading } = useAuth();
   const [tab, setTab] = useState("dashboard");
   const [selectedBundleId, setSelectedBundleId] = useState(null);
   const [bundlesData, setBundlesData] = useState([]);
   const [allChecks, setAllChecks] = useState([]);
+  const [dashboardStats, setDashboardStats] = useState(null);
+  const [settings, setSettings] = useState({});
 
-  // Single API call gets everything: bundles + all checks
+  // Single API call gets everything: bundles + all checks + stats + settings
   const refreshAll = useCallback(async () => {
     try {
       const result = await api.dashboard();
       setBundlesData(result.bundles || []);
       setAllChecks(result.checks || []);
+      setDashboardStats({
+        total: result.total || 0,
+        awaiting_action: result.awaiting_action || 0,
+        completed: result.completed || 0,
+      });
+      if (result.settings) setSettings(result.settings);
     } catch {
       // ignore — pages show their own errors
     }
@@ -32,12 +40,15 @@ function AppContent() {
     if (user) refreshAll();
   }, [user, refreshAll]);
 
-  // Build checks cache grouped by bundle_id
-  const checksCache = {};
-  for (const c of allChecks) {
-    if (!checksCache[c.bundle_id]) checksCache[c.bundle_id] = [];
-    checksCache[c.bundle_id].push(c);
-  }
+  // Build checks cache grouped by bundle_id (memoized)
+  const checksCache = useMemo(() => {
+    const cache = {};
+    for (const c of allChecks) {
+      if (!cache[c.bundle_id]) cache[c.bundle_id] = [];
+      cache[c.bundle_id].push(c);
+    }
+    return cache;
+  }, [allChecks]);
 
   // Allow child components to add a check optimistically
   const addCheckLocal = useCallback((check) => {
@@ -52,14 +63,14 @@ function AppContent() {
     );
   }
 
-  if (!user) return <LoginPage />;
+  if (!user) return <LoginPage settings={settings} />;
 
   const selectedBundle = bundlesData.find((b) => b.id === selectedBundleId);
 
   if (selectedBundleId) {
     return (
       <>
-        <Navbar />
+        <Navbar settings={settings} />
         <BundleDetailPage
           bundleId={selectedBundleId}
           bundle={selectedBundle}
@@ -77,10 +88,12 @@ function AppContent() {
 
   return (
     <>
-      <Navbar />
+      <Navbar settings={settings} />
       <div style={{ paddingBottom: 70 }}>
         {tab === "dashboard" && (
           <DashboardPage
+            stats={dashboardStats}
+            bundles={bundlesData}
             onNavigateBundle={setSelectedBundleId}
             checksCache={checksCache}
           />
@@ -93,7 +106,7 @@ function AppContent() {
             onRefreshAll={refreshAll}
           />
         )}
-        {tab === "settings" && <SettingsPage />}
+        {tab === "settings" && <SettingsPage settings={settings} onSettingsChange={setSettings} />}
       </div>
       <TabBar active={tab} onNavigate={setTab} />
     </>

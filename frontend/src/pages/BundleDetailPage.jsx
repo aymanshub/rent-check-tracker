@@ -21,8 +21,7 @@ export default function BundleDetailPage({
   onAddCheckLocal,
 }) {
   const { t } = useLang();
-  const { user } = useAuth();
-  const isAdmin = !!user;
+  const { isAdmin } = useAuth();
 
   // If parent doesn't have the bundle data yet, fetch it ourselves
   const [fetchedBundle, setFetchedBundle] = useState(null);
@@ -52,6 +51,12 @@ export default function BundleDetailPage({
 
   const totalAmount = checks.reduce((s, c) => s + (Number(c.amount) || 0), 0);
 
+  // Extract prefill data from first check in bundle (for bank details hint)
+  const prefillData = checks.length > 0 ? {
+    bank_branch: checks[0].bank_branch || "",
+    account_number: checks[0].account_number || "",
+  } : null;
+
   // === Scan flow handlers ===
 
   const handleCapture = useCallback(async (compressed) => {
@@ -59,12 +64,8 @@ export default function BundleDetailPage({
     setScanStep("reading");
     setScanWarning(null);
     try {
-      const result = await api.scanCheck(bundleId, compressed.base64, compressed.mimeType, compressed.dataUrl);
+      const result = await api.scanCheck(bundleId, compressed.base64, compressed.mimeType, prefillData);
       setExtractedData(result.extracted || {});
-      // Replace image with cropped version if available
-      if (result.croppedImage) {
-        setImageData(result.croppedImage);
-      }
       if (result.warning) setScanWarning(result.warning);
       setScanStep("reviewing");
     } catch (err) {
@@ -72,7 +73,7 @@ export default function BundleDetailPage({
       setScanWarning(err.message);
       setScanStep("reviewing");
     }
-  }, [bundleId]);
+  }, [bundleId, prefillData]);
 
   const handleConfirmScan = useCallback(async (confirmedData) => {
     if (!imageData) return;
@@ -303,6 +304,7 @@ export default function BundleDetailPage({
           extractedData={extractedData}
           bundleMode={bundle.mode}
           bundleFamily={bundle.checks_on_name}
+          prefillData={prefillData}
           onConfirm={handleConfirmScan}
           onCancel={cancelScan}
           isSubmitting={saving}

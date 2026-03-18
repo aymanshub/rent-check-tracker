@@ -13,10 +13,26 @@ function extractCheckData(base64Image, mimeType) {
   }
 
   var prompt = [
-    "Extract data from this Israeli bank check photo.",
+    "Extract data from this Israeli bank check (שיק) photo.",
+    "",
+    "Israeli check layout guide:",
+    "- TOP-RIGHT: issuer/drawer (printed org name) — this is who WROTE the check, NOT the payee",
+    "- TOP-LEFT: date field",
+    "- MIDDLE: payee line (לפקודת) — THIS is the payee, the person/entity the check is made out to",
+    "- CENTER: amount in digits and words",
+    "- BOTTOM: MICR line containing bank code, branch number, account number, check number",
+    "- NOTE: check may have a receipt stub (ספח) attached at the top — IGNORE it, focus only on the check portion below",
+    "",
     "Return ONLY a JSON object with these fields (use empty string if unreadable):",
-    '{"amount":"3500","deposit_date":"2025-03-15","check_number":"1234567","bank_branch":"Hapoalim 123","account_number":"987654","payee_name":"שם"}',
-    "amount = number only, no ₪ symbol. deposit_date = YYYY-MM-DD format."
+    '{"amount":"3500","deposit_date":"2025-03-15","check_number":"1234567","bank_branch":"12-345","account_number":"987654","payee_name":"שם הנפרע"}',
+    "",
+    "Rules:",
+    "- amount: digits only, no ₪ symbol, no commas",
+    "- deposit_date: YYYY-MM-DD format",
+    "- check_number: from MICR line at bottom",
+    "- bank_branch: format as 'bank_code-branch_number' from MICR line",
+    "- account_number: from MICR line",
+    "- payee_name: from the לפקודת line (the payee), NOT the issuer/drawer printed at top-right",
   ].join("\n");
 
   var requestBody = {

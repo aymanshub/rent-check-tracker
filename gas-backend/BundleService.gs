@@ -20,12 +20,16 @@ function createBundle(data) {
   var bundleId = Utilities.getUuid();
   var now = new Date().toISOString().split("T")[0];
 
+  // Use global split_ratio from settings
+  var settings = getSettings();
+  var splitRatio = data.mode === "single" ? (Number(settings.split_ratio) || 50) : 50;
+
   var bundle = {
     id: bundleId,
     label: data.label.trim(),
     mode: data.mode,
     checks_on_name: data.checks_on_name,
-    split_ratio: data.mode === "single" ? (data.split_ratio || 50) : 50,
+    split_ratio: splitRatio,
     status: "open",
     created_at: now,
   };

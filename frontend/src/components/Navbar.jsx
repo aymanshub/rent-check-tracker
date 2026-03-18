@@ -2,9 +2,13 @@ import { useLang } from "../contexts/LangContext";
 import { useAuth } from "../contexts/AuthContext";
 import LanguageSwitcher from "./LanguageSwitcher";
 
-export default function Navbar() {
+export default function Navbar({ settings = {} }) {
   const { t } = useLang();
   const { user, logout } = useAuth();
+
+  const logoUrl = settings.app_logo_id
+    ? `https://drive.google.com/thumbnail?id=${settings.app_logo_id}&sz=w80`
+    : null;
 
   return (
     <nav
@@ -21,7 +25,14 @@ export default function Navbar() {
         boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
       }}
     >
-      <div style={{ fontWeight: 700, fontSize: "1.1rem" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, fontWeight: 700, fontSize: "1.1rem" }}>
+        {logoUrl && (
+          <img
+            src={logoUrl}
+            alt=""
+            style={{ width: 28, height: 28, borderRadius: 6, objectFit: "cover" }}
+          />
+        )}
         {t("appName")}
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>

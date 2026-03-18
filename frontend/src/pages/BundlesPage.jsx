@@ -7,7 +7,7 @@ import CreateBundleForm from "../components/CreateBundleForm";
 
 export default function BundlesPage({ onNavigateBundle, checksCache, onRefreshAll, bundles = [] }) {
   const { t } = useLang();
-  const { user } = useAuth();
+  const { isAdmin } = useAuth();
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
 
@@ -27,7 +27,7 @@ export default function BundlesPage({ onNavigateBundle, checksCache, onRefreshAl
     <div className="page">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <h2 style={{ fontSize: "1.2rem" }}>{t("bundles")}</h2>
-        {user && (
+        {isAdmin && (
           <button className="btn btn-primary" onClick={() => setShowCreate(true)}>
             + {t("newBundle")}
           </button>

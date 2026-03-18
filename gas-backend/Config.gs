@@ -8,6 +8,7 @@ var CONFIG = {
     USERS: "users",
     BUNDLES: "bundles",
     CHECKS: "checks",
+    SETTINGS: "settings",
   },
   FAMILIES: {
     GEORGE: "george",
@@ -41,6 +42,7 @@ var CONFIG = {
       "date_received", "date_handed", "date_deposited", "date_drawn", "date_delivered",
       "recipient_name", "draw_amount"
     ],
+    SETTINGS: ["key", "value"],
   },
   // Drive folder name for check images
   DRIVE_ROOT_FOLDER: "Rent Check Tracker",

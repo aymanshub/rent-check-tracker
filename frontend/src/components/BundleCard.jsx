@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { useLang } from "../contexts/LangContext";
 import FamilyBadge from "./FamilyBadge";
 
@@ -19,7 +20,7 @@ function getDateRange(checks) {
   return `${fmt(dates[0])} \u2013 ${fmt(dates[dates.length - 1])}`;
 }
 
-export default function BundleCard({ bundle, checks = [], onClick }) {
+export default memo(function BundleCard({ bundle, checks = [], onClick }) {
   const { t } = useLang();
   const total = checks.reduce((s, c) => s + (Number(c.amount) || 0), 0);
   const isOpen = bundle.status === "open";
@@ -114,4 +115,4 @@ export default function BundleCard({ bundle, checks = [], onClick }) {
       )}
     </div>
   );
-}
+});

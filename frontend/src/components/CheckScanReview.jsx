@@ -3,14 +3,14 @@ import { useLang } from "../contexts/LangContext";
 import FamilyBadge from "./FamilyBadge";
 import ImageLightbox from "./ImageLightbox";
 
-// Convert YYYY-MM-DD → DD/MM/YYYY for display
+// Convert YYYY-MM-DD -> DD/MM/YYYY for display
 function toDisplay(isoDate) {
   if (!isoDate) return "";
   const m = isoDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   return m ? `${m[3]}/${m[2]}/${m[1]}` : isoDate;
 }
 
-// Convert DD/MM/YYYY → YYYY-MM-DD for storage
+// Convert DD/MM/YYYY -> YYYY-MM-DD for storage
 function toISO(displayDate) {
   if (!displayDate) return "";
   const m = displayDate.match(/^(\d{1,2})[\/\.\-](\d{1,2})[\/\.\-](\d{4})$/);
@@ -22,24 +22,30 @@ export default function CheckScanReview({
   extractedData,
   bundleMode,
   bundleFamily,
+  prefillData,
   onConfirm,
   onCancel,
   isSubmitting,
   warning,
 }) {
   const { t } = useLang();
-  // Pre-fill payee from bundle family name (more reliable than Gemini)
-  const familyNames = { george: t("familyGeorge"), asaad: t("familyAsaad") };
+
+  // Payee: in single mode, always use the bundle family code key
+  // In alternating mode, use extracted or empty (will be set via issued_to selector)
   const defaultPayee = bundleMode === "single" && bundleFamily
-    ? familyNames[bundleFamily] || ""
-    : extractedData?.payee_name || "";
+    ? bundleFamily
+    : "";
+
+  // Pre-fill bank details from prior checks if Gemini didn't extract them
+  const bankBranch = extractedData?.bank_branch || prefillData?.bank_branch || "";
+  const accountNumber = extractedData?.account_number || prefillData?.account_number || "";
 
   const [form, setForm] = useState({
     amount: extractedData?.amount || "",
     deposit_date: toDisplay(extractedData?.deposit_date || ""),
     check_number: extractedData?.check_number || "",
-    bank_branch: extractedData?.bank_branch || "",
-    account_number: extractedData?.account_number || "",
+    bank_branch: bankBranch,
+    account_number: accountNumber,
     payee_name: defaultPayee,
     issued_to: "",
   });
@@ -51,7 +57,12 @@ export default function CheckScanReview({
 
   // Convert date back to YYYY-MM-DD before sending to backend
   const handleConfirm = () => {
-    onConfirm({ ...form, deposit_date: toISO(form.deposit_date) });
+    const data = { ...form, deposit_date: toISO(form.deposit_date) };
+    // In alternating mode, set payee_name to the selected family code key
+    if (bundleMode === "alternating" && data.issued_to) {
+      data.payee_name = data.issued_to;
+    }
+    onConfirm(data);
   };
 
   const fields = [
@@ -60,7 +71,6 @@ export default function CheckScanReview({
     { key: "check_number", label: t("checkNumber"), type: "text" },
     { key: "bank_branch", label: t("bankBranch"), type: "text" },
     { key: "account_number", label: t("accountNumber"), type: "text" },
-    { key: "payee_name", label: t("payeeName"), type: "text" },
   ];
 
   return (
@@ -120,7 +130,7 @@ export default function CheckScanReview({
                 {f.label} {f.key === "amount" && "*"}
               </label>
               <input
-                className={`input ${!form[f.key] && f.key !== "amount" ? "" : ""} ${
+                className={`input ${
                   f.key === "amount" && !form[f.key] ? "input-warn" : ""
                 }`}
                 type={f.type}

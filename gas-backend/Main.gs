@@ -24,14 +24,22 @@ function doPost(e) {
 
   // READ actions (no admin required)
   switch (action) {
-    case "dashboard":  return jsonResponse(getDashboard());
-    case "bundles":    return jsonResponse(getBundles());
-    case "checks":     return jsonResponse(getChecks(body.bundle_id));
+    case "dashboard":      return jsonResponse(getDashboard());
+    case "bundles":        return jsonResponse(getBundles());
+    case "checks":         return jsonResponse(getChecks(body.bundle_id));
+    case "get_user_info":  return jsonResponse({ role: user.role, family: user.family, name: user.name, email: user.email });
+    case "get_settings":   return jsonResponse({ settings: getSettings() });
   }
 
   // WRITE actions (admin required)
   if (user.role !== CONFIG.ROLES.ADMIN) {
     return jsonResponse({ error: "Forbidden \u2014 admin only" });
+  }
+
+  // Return Gemini key for client-side scanning
+  if (action === "get_gemini_key") {
+    var key = PropertiesService.getScriptProperties().getProperty("GEMINI_API_KEY");
+    return jsonResponse({ key: key || "" });
   }
 
   switch (action) {
@@ -46,6 +54,8 @@ function doPost(e) {
     case "users":              return jsonResponse(getUsers());
     case "add_user":           return jsonResponse(addUser(body.data));
     case "remove_user":        return jsonResponse(removeUser(body.user_id, user.id));
+    case "update_setting":     return jsonResponse(updateSetting(body.key, body.value));
+    case "upload_logo":        return jsonResponse(uploadLogo(body.image_data, body.mime_type));
     default:                   return jsonResponse({ error: "Unknown action" });
   }
 }
@@ -66,6 +76,64 @@ function jsonResponse(data, status) {
   );
   output.setMimeType(ContentService.MimeType.JSON);
   return output;
+}
+
+// ═══════════════════════════════════════════
+// Settings
+// ═══════════════════════════════════════════
+
+function getSettings() {
+  var rows = readAll(CONFIG.SHEET_NAMES.SETTINGS);
+  var settings = {};
+  for (var i = 0; i < rows.length; i++) {
+    settings[rows[i].key] = rows[i].value;
+  }
+  // Defaults
+  if (!settings.split_ratio) settings.split_ratio = "50";
+  if (!settings.app_logo_id) settings.app_logo_id = "";
+  return settings;
+}
+
+function updateSetting(key, value) {
+  if (!key) return { error: "key is required" };
+  var sheet = getSheet(CONFIG.SHEET_NAMES.SETTINGS);
+  var data = sheet.getDataRange().getValues();
+  var headers = data[0];
+  var keyCol = headers.indexOf("key");
+  var valCol = headers.indexOf("value");
+
+  for (var r = 1; r < data.length; r++) {
+    if (data[r][keyCol] === key) {
+      sheet.getRange(r + 1, valCol + 1).setValue(value);
+      return { success: true };
+    }
+  }
+  // Key doesn't exist yet — append
+  appendRow(CONFIG.SHEET_NAMES.SETTINGS, { key: key, value: value });
+  return { success: true };
+}
+
+function uploadLogo(base64Data, mimeType) {
+  if (!base64Data || !mimeType) return { error: "image_data and mime_type required" };
+  try {
+    var folder = getRootFolder();
+    var ext = ({ "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" })[mimeType] || "png";
+    var blob = Utilities.newBlob(Utilities.base64Decode(base64Data), mimeType, "app_logo." + ext);
+
+    // Delete old logo if exists
+    var oldId = getSettings().app_logo_id;
+    if (oldId) {
+      try { DriveApp.getFileById(oldId).setTrashed(true); } catch (e) { /* gone */ }
+    }
+
+    var file = folder.createFile(blob);
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    var fileId = file.getId();
+    updateSetting("app_logo_id", fileId);
+    return { success: true, app_logo_id: fileId };
+  } catch (e) {
+    return { error: "Failed to upload logo: " + e.message };
+  }
 }
 
 // ═══════════════════════════════════════════

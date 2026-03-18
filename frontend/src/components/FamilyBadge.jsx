@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { useLang } from "../contexts/LangContext";
 
 const FAMILY_STYLES = {
@@ -5,7 +6,7 @@ const FAMILY_STYLES = {
   asaad: { bg: "#ede9fe", color: "#7c3aed", border: "#c4b5fd" },
 };
 
-export default function FamilyBadge({ family, size = "sm" }) {
+export default memo(function FamilyBadge({ family, size = "sm" }) {
   const { t } = useLang();
   const style = FAMILY_STYLES[family] || FAMILY_STYLES.george;
   const label = family === "george" ? t("familyGeorge") : t("familyAsaad");
@@ -29,4 +30,4 @@ export default function FamilyBadge({ family, size = "sm" }) {
       {label}
     </span>
   );
-}
+});

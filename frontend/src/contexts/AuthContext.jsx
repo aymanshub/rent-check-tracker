@@ -20,6 +20,7 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(() => {
     localStorage.removeItem("id_token");
+    api.clearCache();
     setUser(null);
     setError(null);
     if (window.google?.accounts?.id) {
@@ -32,20 +33,19 @@ export function AuthProvider({ children }) {
     setError(null);
     try {
       localStorage.setItem("id_token", idToken);
-      const data = await api.dashboard();
-      if (data.error) {
-        setError(data.error);
+      const info = await api.getUserInfo();
+      if (info.error) {
+        setError(info.error);
         localStorage.removeItem("id_token");
         setUser(null);
       } else {
         const decoded = decodeJwt(idToken);
-        // We get user info from the token for display; role/family from first API call
-        // For simplicity, store decoded token info + mark as authenticated
         setUser({
-          email: decoded?.email || "",
-          name: decoded?.name || decoded?.email || "",
+          email: info.email || decoded?.email || "",
+          name: info.name || decoded?.name || decoded?.email || "",
           picture: decoded?.picture || "",
-          authenticated: true,
+          role: info.role || "member",
+          family: info.family || "",
         });
       }
     } catch (err) {
@@ -125,8 +125,10 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  const isAdmin = user?.role === "admin";
+
   return (
-    <AuthContext.Provider value={{ user, loading, error, logout, renderSignInButton }}>
+    <AuthContext.Provider value={{ user, isAdmin, loading, error, logout, renderSignInButton }}>
       {children}
     </AuthContext.Provider>
   );

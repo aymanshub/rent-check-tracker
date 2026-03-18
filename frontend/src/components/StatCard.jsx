@@ -1,4 +1,6 @@
-export default function StatCard({ label, value, color }) {
+import { memo } from "react";
+
+export default memo(function StatCard({ label, value, color }) {
   return (
     <div
       className="card"
@@ -29,4 +31,4 @@ export default function StatCard({ label, value, color }) {
       </div>
     </div>
   );
-}
+});

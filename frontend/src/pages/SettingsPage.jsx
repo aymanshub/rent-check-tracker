@@ -1,23 +1,36 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useLang } from "../contexts/LangContext";
 import { useAuth } from "../contexts/AuthContext";
 import { useUsers } from "../hooks/useUsers";
+import { api } from "../services/api";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 import FamilyBadge from "../components/FamilyBadge";
 import ConfirmDialog from "../components/ConfirmDialog";
 
-export default function SettingsPage() {
+export default function SettingsPage({ settings = {}, onSettingsChange }) {
   const { t } = useLang();
-  const { user } = useAuth();
+  const { isAdmin } = useAuth();
   const { users, loading, refresh, add, remove } = useUsers();
   const [showAdd, setShowAdd] = useState(false);
   const [addForm, setAddForm] = useState({ email: "", name: "", family: "george" });
   const [adding, setAdding] = useState(false);
   const [removeId, setRemoveId] = useState(null);
 
+  // Split ratio state
+  const [splitRatio, setSplitRatio] = useState(settings.split_ratio || "50");
+  const [savingSplit, setSavingSplit] = useState(false);
+
+  // Logo state
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const logoInputRef = useRef();
+
   useEffect(() => {
-    if (user) refresh();
-  }, [user, refresh]);
+    setSplitRatio(settings.split_ratio || "50");
+  }, [settings.split_ratio]);
+
+  useEffect(() => {
+    if (isAdmin) refresh();
+  }, [isAdmin, refresh]);
 
   const handleAdd = async (e) => {
     e.preventDefault();
@@ -45,6 +58,49 @@ export default function SettingsPage() {
     }
   };
 
+  const handleSaveSplitRatio = async () => {
+    const val = Number(splitRatio);
+    if (!val || val < 1 || val > 99) return;
+    setSavingSplit(true);
+    try {
+      await api.updateSetting("split_ratio", String(val));
+      if (onSettingsChange) onSettingsChange((prev) => ({ ...prev, split_ratio: String(val) }));
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setSavingSplit(false);
+    }
+  };
+
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingLogo(true);
+    try {
+      // Read and compress
+      const dataUrl = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.readAsDataURL(file);
+      });
+      const base64 = dataUrl.split(",")[1];
+      const mimeType = file.type || "image/png";
+      const result = await api.uploadLogo(base64, mimeType);
+      if (result.app_logo_id && onSettingsChange) {
+        onSettingsChange((prev) => ({ ...prev, app_logo_id: result.app_logo_id }));
+      }
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setUploadingLogo(false);
+      if (logoInputRef.current) logoInputRef.current.value = "";
+    }
+  };
+
+  const logoUrl = settings.app_logo_id
+    ? `https://drive.google.com/thumbnail?id=${settings.app_logo_id}&sz=w200`
+    : null;
+
   return (
     <div className="page">
       <h2 style={{ fontSize: "1.2rem", marginBottom: 20 }}>{t("settings")}</h2>
@@ -55,8 +111,81 @@ export default function SettingsPage() {
         <LanguageSwitcher />
       </div>
 
-      {/* User Management */}
-      {user && (
+      {/* Split Ratio — admin only */}
+      {isAdmin && (
+        <div className="card" style={{ padding: 16, marginBottom: 16 }}>
+          <h3 style={{ fontSize: "0.95rem", marginBottom: 10 }}>{t("splitRatio")}</h3>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <input
+              className="input"
+              type="number"
+              min={1}
+              max={99}
+              value={splitRatio}
+              onChange={(e) => setSplitRatio(e.target.value)}
+              style={{ width: 80, textAlign: "center" }}
+            />
+            <span>%</span>
+            <button
+              className="btn btn-primary"
+              onClick={handleSaveSplitRatio}
+              disabled={savingSplit || splitRatio === (settings.split_ratio || "50")}
+              style={{ fontSize: "0.8rem", padding: "6px 14px" }}
+            >
+              {savingSplit ? <span className="spinner" style={{ width: 14, height: 14 }} /> : t("save")}
+            </button>
+          </div>
+          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 6 }}>
+            {t("splitRatioDesc")}: {splitRatio}%
+          </div>
+        </div>
+      )}
+
+      {/* App Logo — admin only */}
+      {isAdmin && (
+        <div className="card" style={{ padding: 16, marginBottom: 16 }}>
+          <h3 style={{ fontSize: "0.95rem", marginBottom: 10 }}>{t("appLogo")}</h3>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt="App logo"
+                style={{ width: 60, height: 60, borderRadius: 12, objectFit: "cover", border: "1px solid var(--border)" }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: 60, height: 60, borderRadius: 12,
+                  background: "var(--primary)", display: "flex",
+                  alignItems: "center", justifyContent: "center", fontSize: "1.5rem",
+                }}
+              >
+                {"\u{1F3E0}"}
+              </div>
+            )}
+            <div>
+              <input
+                ref={logoInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleLogoUpload}
+                style={{ display: "none" }}
+              />
+              <button
+                className="btn btn-outline"
+                onClick={() => logoInputRef.current?.click()}
+                disabled={uploadingLogo}
+                style={{ fontSize: "0.8rem" }}
+              >
+                {uploadingLogo ? <span className="spinner" style={{ width: 14, height: 14 }} /> : t("uploadLogo")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* User Management — admin only */}
+      {isAdmin && (
         <div className="card" style={{ padding: 16 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
             <h3 style={{ fontSize: "0.95rem" }}>{t("userManagement")}</h3>

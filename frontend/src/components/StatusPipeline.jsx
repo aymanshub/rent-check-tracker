@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { STATUS_COLORS } from "../styles/theme";
 
 const STATUS_ICONS = {
@@ -9,7 +10,7 @@ const STATUS_ICONS = {
   delivered: "\u2705",
 };
 
-export default function StatusPipeline({ flow, currentStatus }) {
+export default memo(function StatusPipeline({ flow, currentStatus }) {
   const currentIdx = flow.indexOf(currentStatus);
 
   return (
@@ -55,4 +56,4 @@ export default function StatusPipeline({ flow, currentStatus }) {
       })}
     </div>
   );
-}
+});

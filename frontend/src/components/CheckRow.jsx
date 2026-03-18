@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, memo } from "react";
 import { useLang } from "../contexts/LangContext";
 import FamilyBadge from "./FamilyBadge";
 import StatusPipeline from "./StatusPipeline";
@@ -37,7 +37,7 @@ function getNextAction(check, bundle, t) {
   return { status: next, label: labels[next] || next, needsRecipient: next === "handed_over" || next === "delivered" };
 }
 
-export default function CheckRow({ check, bundle, onAdvance, onDelete, isAdmin }) {
+export default memo(function CheckRow({ check, bundle, onAdvance, onDelete, isAdmin }) {
   const { t } = useLang();
   const [lightbox, setLightbox] = useState(false);
   const [recipientPrompt, setRecipientPrompt] = useState(false);
@@ -193,4 +193,4 @@ export default function CheckRow({ check, bundle, onAdvance, onDelete, isAdmin }
       )}
     </div>
   );
-}
+});

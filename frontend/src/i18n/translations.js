@@ -125,6 +125,8 @@ const T = {
     admin: "Admin",
     member: "Member",
     noUsers: "No users configured.",
+    appLogo: "App Logo",
+    uploadLogo: "Upload Logo",
   },
 
   ar: {
@@ -240,6 +242,8 @@ const T = {
     admin: "\u0645\u062F\u064A\u0631",
     member: "\u0639\u0636\u0648",
     noUsers: "\u0644\u0627 \u064A\u0648\u062C\u062F \u0645\u0633\u062A\u062E\u062F\u0645\u0648\u0646.",
+    appLogo: "\u0634\u0639\u0627\u0631 \u0627\u0644\u062A\u0637\u0628\u064A\u0642",
+    uploadLogo: "\u0631\u0641\u0639 \u0634\u0639\u0627\u0631",
   },
 
   he: {
@@ -355,6 +359,8 @@ const T = {
     admin: "\u05DE\u05E0\u05D4\u05DC",
     member: "\u05D7\u05D1\u05E8",
     noUsers: "\u05D0\u05D9\u05DF \u05DE\u05E9\u05EA\u05DE\u05E9\u05D9\u05DD.",
+    appLogo: "\u05DC\u05D5\u05D2\u05D5 \u05D0\u05E4\u05DC\u05D9\u05E7\u05E6\u05D9\u05D4",
+    uploadLogo: "\u05D4\u05E2\u05DC\u05D4 \u05DC\u05D5\u05D2\u05D5",
   },
 };
 

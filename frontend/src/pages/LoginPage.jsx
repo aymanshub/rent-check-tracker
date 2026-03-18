@@ -3,7 +3,7 @@ import { useLang } from "../contexts/LangContext";
 import { useAuth } from "../contexts/AuthContext";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 
-export default function LoginPage() {
+export default function LoginPage({ settings = {} }) {
   const { t } = useLang();
   const { renderSignInButton, error } = useAuth();
   const btnRef = useRef();
@@ -13,6 +13,10 @@ export default function LoginPage() {
       renderSignInButton(btnRef.current);
     }
   }, [renderSignInButton]);
+
+  const logoUrl = settings.app_logo_id
+    ? `https://drive.google.com/thumbnail?id=${settings.app_logo_id}&sz=w200`
+    : null;
 
   return (
     <div
@@ -28,21 +32,36 @@ export default function LoginPage() {
       }}
     >
       <div style={{ textAlign: "center", marginBottom: 40 }}>
-        <div
-          style={{
-            width: 80,
-            height: 80,
-            borderRadius: 20,
-            background: "var(--primary)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            margin: "0 auto 16px",
-            fontSize: "2.2rem",
-          }}
-        >
-          {"\u{1F3E0}"}
-        </div>
+        {logoUrl ? (
+          <img
+            src={logoUrl}
+            alt="App logo"
+            style={{
+              width: 80,
+              height: 80,
+              borderRadius: 20,
+              objectFit: "cover",
+              margin: "0 auto 16px",
+              display: "block",
+            }}
+          />
+        ) : (
+          <div
+            style={{
+              width: 80,
+              height: 80,
+              borderRadius: 20,
+              background: "var(--primary)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 16px",
+              fontSize: "2.2rem",
+            }}
+          >
+            {"\u{1F3E0}"}
+          </div>
+        )}
         <h1 style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--primary)", marginBottom: 8 }}>
           {t("appName")}
         </h1>

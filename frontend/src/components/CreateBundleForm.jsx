@@ -7,7 +7,6 @@ export default function CreateBundleForm({ onSubmit, onCancel, submitting }) {
     label: "",
     mode: "single",
     checks_on_name: "george",
-    split_ratio: 50,
   });
 
   const update = (field, value) => setForm((p) => ({ ...p, [field]: value }));
@@ -91,31 +90,6 @@ export default function CreateBundleForm({ onSubmit, onCancel, submitting }) {
               ))}
             </div>
           </div>
-
-          {/* Split ratio (single mode only) */}
-          {form.mode === "single" && (
-            <div>
-              <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: 4 }}>
-                {t("splitRatio")}
-              </label>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <input
-                  type="range"
-                  min={1}
-                  max={99}
-                  value={form.split_ratio}
-                  onChange={(e) => update("split_ratio", Number(e.target.value))}
-                  style={{ flex: 1 }}
-                />
-                <span className="ltr-num" style={{ fontWeight: 700, minWidth: 40, textAlign: "center" }}>
-                  {form.split_ratio}%
-                </span>
-              </div>
-              <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 2 }}>
-                {t("splitRatioDesc")}: {form.split_ratio}%
-              </div>
-            </div>
-          )}
 
           {/* Actions */}
           <div style={{ display: "flex", gap: 12, marginTop: 4 }}>

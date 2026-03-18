@@ -143,5 +143,7 @@ function getDashboard() {
     awaiting_action: awaitingAction,
     completed: completed,
     bundles: bundles,
+    checks: checks,
+    settings: getSettings(),
   };
 }
