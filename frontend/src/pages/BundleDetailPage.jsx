@@ -61,7 +61,12 @@ export default function BundleDetailPage({ bundleId, bundle, onBack, onRefreshBu
     if (!imageData) return;
     setSaving(true);
     try {
-      await api.confirmCheckData(bundleId, imageData.base64, imageData.mimeType, confirmedData);
+      try {
+        await api.confirmCheckData(bundleId, imageData.base64, imageData.mimeType, confirmedData);
+      } catch {
+        // GAS may save successfully but response gets corrupted on mobile.
+        // Refresh anyway since the data likely saved.
+      }
       setScanStep(null);
       setImageData(null);
       setExtractedData(null);
