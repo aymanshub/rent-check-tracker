@@ -79,6 +79,7 @@ function AppContent() {
           bundleId={selectedBundleId}
           bundle={selectedBundle}
           checks={checksCache[selectedBundleId] || []}
+          allChecks={allChecks}
           onBack={() => {
             setSelectedBundleId(null);
             refreshAll();

@@ -17,6 +17,7 @@ export default function BundleDetailPage({
   bundleId,
   bundle: bundleProp,
   checks = [],
+  allChecks = [],
   onBack,
   onRefreshAll,
   onAddCheckLocal,
@@ -94,9 +95,9 @@ export default function BundleDetailPage({
     const date = (confirmedData.deposit_date || "").trim();
 
     if (num) {
-      const dupByNumber = checks.find((c) => String(c.check_number).trim() === num);
+      const dupByNumber = allChecks.find((c) => String(c.check_number).trim() === num);
       if (dupByNumber) {
-        alert(t("duplicateCheckNumber") || `Check #${num} already exists in this bundle.`);
+        alert(t("duplicateCheckNumber"));
         return;
       }
     }
@@ -152,7 +153,7 @@ export default function BundleDetailPage({
 
     // Try to refresh all data from server in background
     if (onRefreshAll) onRefreshAll();
-  }, [bundleId, imageData, checks, bundle, onAddCheckLocal, onRefreshAll, t]);
+  }, [bundleId, imageData, checks, allChecks, bundle, onAddCheckLocal, onRefreshAll, t]);
 
   const cancelScan = () => {
     setScanStep(null);
