@@ -59,8 +59,12 @@ export default function BundleDetailPage({
     setScanStep("reading");
     setScanWarning(null);
     try {
-      const result = await api.scanCheck(bundleId, compressed.base64, compressed.mimeType);
+      const result = await api.scanCheck(bundleId, compressed.base64, compressed.mimeType, compressed.dataUrl);
       setExtractedData(result.extracted || {});
+      // Replace image with cropped version if available
+      if (result.croppedImage) {
+        setImageData(result.croppedImage);
+      }
       if (result.warning) setScanWarning(result.warning);
       setScanStep("reviewing");
     } catch (err) {

@@ -97,10 +97,19 @@ async function callGeminiDirect(base64Data, mimeType) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   const prompt = [
-    "Extract data from this Israeli bank check photo.",
-    "Return ONLY a JSON object with these fields (use empty string if unreadable):",
-    '{"amount":"3500","deposit_date":"2025-03-15","check_number":"1234567","bank_branch":"Hapoalim 123","account_number":"987654","payee_name":"שם"}',
-    "amount = number only, no ₪ symbol. deposit_date = YYYY-MM-DD format.",
+    "This photo contains an Israeli bank check (שיק). Extract data from it.",
+    "",
+    "IMPORTANT distinctions:",
+    "- payee_name = the HANDWRITTEN name on the לפקודת line (who RECEIVES the money). This is NOT the printed organization/bank name at the top of the check.",
+    "- The printed name/logo at the top-right corner is the ISSUER (who writes the check) — ignore it for payee_name.",
+    "",
+    "Also identify the check's bounding box in the image for cropping.",
+    "Return crop coordinates as percentages (0-100) of the full image dimensions.",
+    "",
+    "Return ONLY a JSON object with these fields (empty string if unreadable):",
+    '{"amount":"3500","deposit_date":"2025-03-15","check_number":"1234567","bank_branch":"Hapoalim 123","account_number":"987654","payee_name":"שם","crop_top":"5","crop_left":"3","crop_width":"90","crop_height":"60"}',
+    "",
+    "amount = number only, no ₪. deposit_date = YYYY-MM-DD. crop values = percentage of image.",
   ].join("\n");
 
   const response = await fetch(url, {
@@ -139,16 +148,59 @@ async function callGeminiDirect(base64Data, mimeType) {
 
   const extracted = JSON.parse(match[0]);
 
-  // Normalize
+  // Normalize amount
   if (extracted.amount) {
     extracted.amount = String(extracted.amount).replace(/[^\d.]/g, "");
   }
+
   const fields = ["amount", "deposit_date", "check_number", "bank_branch", "account_number", "payee_name"];
   for (const f of fields) {
     if (!extracted[f]) extracted[f] = "";
   }
 
+  // Extract crop coordinates (percentages)
+  extracted._crop = {
+    top: parseFloat(extracted.crop_top) || 0,
+    left: parseFloat(extracted.crop_left) || 0,
+    width: parseFloat(extracted.crop_width) || 100,
+    height: parseFloat(extracted.crop_height) || 100,
+  };
+  delete extracted.crop_top;
+  delete extracted.crop_left;
+  delete extracted.crop_width;
+  delete extracted.crop_height;
+
   return extracted;
+}
+
+/**
+ * Crops a base64 image using percentage-based coordinates from Gemini.
+ * Returns a new { base64, mimeType, dataUrl }.
+ */
+function cropImage(dataUrl, crop) {
+  return new Promise((resolve) => {
+    if (!crop || crop.width >= 99) {
+      // No meaningful crop — return as-is
+      const base64 = dataUrl.split(",")[1];
+      resolve({ base64, mimeType: "image/jpeg", dataUrl });
+      return;
+    }
+    const img = new Image();
+    img.onload = () => {
+      const sx = Math.round((crop.left / 100) * img.width);
+      const sy = Math.round((crop.top / 100) * img.height);
+      const sw = Math.round((crop.width / 100) * img.width);
+      const sh = Math.round((crop.height / 100) * img.height);
+      const canvas = document.createElement("canvas");
+      canvas.width = sw;
+      canvas.height = sh;
+      canvas.getContext("2d").drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+      const croppedUrl = canvas.toDataURL("image/jpeg", 0.85);
+      const base64 = croppedUrl.split(",")[1];
+      resolve({ base64, mimeType: "image/jpeg", dataUrl: croppedUrl });
+    };
+    img.src = dataUrl;
+  });
 }
 
 // ═══════════════════════════════════════════
@@ -171,9 +223,13 @@ export const api = {
   deleteCheck: (checkId) => gasRequest("delete_check", { check_id: checkId }),
 
   // Scan flow — Step 1: call Gemini DIRECTLY from browser (no GAS redirect issues)
-  scanCheck: async (bundleId, base64Data, mimeType) => {
+  // Returns { extracted, croppedImage } where croppedImage replaces the original
+  scanCheck: async (bundleId, base64Data, mimeType, originalDataUrl) => {
     const extracted = await callGeminiDirect(base64Data, mimeType);
-    return { extracted };
+    // Crop the image to just the check using Gemini's coordinates
+    const croppedImage = await cropImage(originalDataUrl, extracted._crop);
+    delete extracted._crop;
+    return { extracted, croppedImage };
   },
 
   // Scan flow — Step 2: confirm and save through GAS (image + data for Drive upload)
