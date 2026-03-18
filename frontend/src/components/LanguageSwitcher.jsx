@@ -1,7 +1,7 @@
 import { useLang } from "../contexts/LangContext";
 
 const LANGS = [
-  { code: "en", label: "English" },
+  // { code: "en", label: "English" },
   { code: "ar", label: "\u0639\u0631\u0628\u064A" },
   { code: "he", label: "\u05E2\u05D1\u05E8\u05D9\u05EA" },
 ];

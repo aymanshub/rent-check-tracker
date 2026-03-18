@@ -6,7 +6,7 @@ const LangContext = createContext();
 const RTL_LANGS = ["ar", "he"];
 
 export function LangProvider({ children }) {
-  const [lang, setLang] = useState(() => localStorage.getItem("lang") || "en");
+  const [lang, setLang] = useState(() => localStorage.getItem("lang") || "ar");
 
   useEffect(() => {
     localStorage.setItem("lang", lang);
