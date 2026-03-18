@@ -93,8 +93,7 @@ async function callGeminiDirect(base64Data, mimeType) {
           { text: prompt },
         ],
       }],
-      generationConfig: { temperature: 0.1, maxOutputTokens: 4096 },
-      thinkingConfig: { thinkingBudget: 0 },
+      generationConfig: { temperature: 0.1, maxOutputTokens: 8192 },
     }),
   });
 
