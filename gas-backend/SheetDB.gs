@@ -25,7 +25,18 @@ function readAll(sheetName) {
   var headers = data[0];
   return data.slice(1).map(function(row) {
     var obj = {};
-    headers.forEach(function(h, i) { obj[h] = row[i]; });
+    headers.forEach(function(h, i) {
+      var val = row[i];
+      // Convert Date objects back to YYYY-MM-DD strings
+      // (Google Sheets auto-converts date strings to Date objects)
+      if (val instanceof Date) {
+        var y = val.getFullYear();
+        var m = String(val.getMonth() + 1).padStart(2, "0");
+        var d = String(val.getDate()).padStart(2, "0");
+        val = y + "-" + m + "-" + d;
+      }
+      obj[h] = val;
+    });
     return obj;
   });
 }
