@@ -100,11 +100,11 @@ export function AuthProvider({ children }) {
           initGIS();
         }
       }, 100);
-      // Give up after 10s
+      // Give up after 5s — show login page so user isn't stuck on blank screen
       setTimeout(() => {
         clearInterval(interval);
         setLoading(false);
-      }, 10000);
+      }, 5000);
     }
 
     // Listen for auth expiry from API layer
