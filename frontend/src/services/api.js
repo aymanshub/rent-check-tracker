@@ -214,18 +214,19 @@ export const api = {
   getUserInfo: () => gasRequest("get_user_info"),
 
   // Dashboard (with stale-while-revalidate caching)
-  dashboard: async () => {
-    const cached = getCached("dashboard");
-    const fetchFresh = gasRequest("dashboard").then((result) => {
-      setCache("dashboard", result);
-      return result;
-    });
-    if (cached) {
-      // Return cached immediately, refresh in background
-      fetchFresh.catch(() => {});
-      return cached;
+  // fresh=true bypasses cache — use after mutations
+  dashboard: async (fresh = false) => {
+    if (!fresh) {
+      const cached = getCached("dashboard");
+      if (cached) {
+        // Return cached immediately, refresh in background
+        gasRequest("dashboard").then((r) => setCache("dashboard", r)).catch(() => {});
+        return cached;
+      }
     }
-    return fetchFresh;
+    const result = await gasRequest("dashboard");
+    setCache("dashboard", result);
+    return result;
   },
 
   // Bundles

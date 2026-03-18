@@ -19,10 +19,10 @@ function AppContent() {
   const [dashboardStats, setDashboardStats] = useState(null);
   const [settings, setSettings] = useState({});
 
-  // Single API call gets everything: bundles + all checks + stats + settings
-  const refreshAll = useCallback(async () => {
+  // Load data from API. fresh=true bypasses cache (use after mutations).
+  const loadData = useCallback(async (fresh = false) => {
     try {
-      const result = await api.dashboard();
+      const result = await api.dashboard(fresh);
       setBundlesData(result.bundles || []);
       setAllChecks(result.checks || []);
       setDashboardStats({
@@ -36,9 +36,13 @@ function AppContent() {
     }
   }, []);
 
+  // refreshAll always fetches fresh (called after mutations)
+  const refreshAll = useCallback(() => loadData(true), [loadData]);
+
+  // Initial load uses cache for instant display
   useEffect(() => {
-    if (user) refreshAll();
-  }, [user, refreshAll]);
+    if (user) loadData();
+  }, [user, loadData]);
 
   // Build checks cache grouped by bundle_id (memoized)
   const checksCache = useMemo(() => {
