@@ -15,35 +15,34 @@ function AppContent() {
   const [tab, setTab] = useState("dashboard");
   const [selectedBundleId, setSelectedBundleId] = useState(null);
   const [bundlesData, setBundlesData] = useState([]);
-  const [checksCache, setChecksCache] = useState({});
+  const [allChecks, setAllChecks] = useState([]);
 
-  const refreshBundles = useCallback(async () => {
+  // Single API call gets everything: bundles + all checks
+  const refreshAll = useCallback(async () => {
     try {
-      const result = await api.bundles();
+      const result = await api.dashboard();
       setBundlesData(result.bundles || []);
+      setAllChecks(result.checks || []);
     } catch {
-      // Pages have their own error handling
+      // ignore — pages show their own errors
     }
   }, []);
 
   useEffect(() => {
-    if (user) refreshBundles();
-  }, [user, refreshBundles]);
+    if (user) refreshAll();
+  }, [user, refreshAll]);
 
-  const loadChecks = useCallback(async (bundleId) => {
-    try {
-      const result = await api.checks(bundleId);
-      setChecksCache((prev) => ({ ...prev, [bundleId]: result.checks || [] }));
-    } catch {
-      // ignore
-    }
+  // Build checks cache grouped by bundle_id
+  const checksCache = {};
+  for (const c of allChecks) {
+    if (!checksCache[c.bundle_id]) checksCache[c.bundle_id] = [];
+    checksCache[c.bundle_id].push(c);
+  }
+
+  // Allow child components to add a check optimistically
+  const addCheckLocal = useCallback((check) => {
+    setAllChecks((prev) => [...prev, check]);
   }, []);
-
-  useEffect(() => {
-    bundlesData.forEach((b) => {
-      if (!checksCache[b.id]) loadChecks(b.id);
-    });
-  }, [bundlesData, checksCache, loadChecks]);
 
   if (loading) {
     return (
@@ -64,11 +63,13 @@ function AppContent() {
         <BundleDetailPage
           bundleId={selectedBundleId}
           bundle={selectedBundle}
+          checks={checksCache[selectedBundleId] || []}
           onBack={() => {
             setSelectedBundleId(null);
-            refreshBundles();
+            refreshAll();
           }}
-          onRefreshBundles={refreshBundles}
+          onRefreshAll={refreshAll}
+          onAddCheckLocal={addCheckLocal}
         />
       </>
     );
@@ -86,8 +87,10 @@ function AppContent() {
         )}
         {tab === "bundles" && (
           <BundlesPage
+            bundles={bundlesData}
             onNavigateBundle={setSelectedBundleId}
             checksCache={checksCache}
+            onRefreshAll={refreshAll}
           />
         )}
         {tab === "settings" && <SettingsPage />}

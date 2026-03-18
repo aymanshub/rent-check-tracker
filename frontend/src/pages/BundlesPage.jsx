@@ -1,31 +1,26 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useLang } from "../contexts/LangContext";
 import { useAuth } from "../contexts/AuthContext";
-import { useBundles } from "../hooks/useBundles";
+import { api } from "../services/api";
 import BundleCard from "../components/BundleCard";
 import CreateBundleForm from "../components/CreateBundleForm";
 
-export default function BundlesPage({ onNavigateBundle, checksCache }) {
+export default function BundlesPage({ onNavigateBundle, checksCache, onRefreshAll, bundles = [] }) {
   const { t } = useLang();
   const { user } = useAuth();
-  const { bundles, loading, error, refresh, create } = useBundles();
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
 
   const handleCreate = async (data) => {
     setCreating(true);
     try {
-      await create(data);
+      await api.createBundle(data);
     } catch {
-      // GAS may save but response gets corrupted on mobile — that's OK
+      // GAS may save but response corrupted on mobile
     }
     setCreating(false);
     setShowCreate(false);
-    refresh();
+    if (onRefreshAll) onRefreshAll();
   };
 
   return (
@@ -39,22 +34,7 @@ export default function BundlesPage({ onNavigateBundle, checksCache }) {
         )}
       </div>
 
-      {loading && bundles.length === 0 && (
-        <div style={{ textAlign: "center", padding: 40 }}>
-          <div className="spinner" style={{ width: 32, height: 32 }} />
-        </div>
-      )}
-
-      {error && (
-        <div style={{ color: "var(--danger)", marginBottom: 12 }}>
-          {error}
-          <button className="btn btn-ghost" onClick={refresh} style={{ marginInlineStart: 8 }}>
-            {t("retry")}
-          </button>
-        </div>
-      )}
-
-      {!loading && bundles.length === 0 && !error && (
+      {bundles.length === 0 && (
         <div className="card" style={{ padding: 32, textAlign: "center", color: "var(--text-muted)" }}>
           <p style={{ fontSize: "1.2rem", marginBottom: 4 }}>{t("noBundles")}</p>
           <p style={{ fontSize: "0.85rem" }}>{t("noBundlesDesc")}</p>

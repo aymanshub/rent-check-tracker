@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useLang } from "../contexts/LangContext";
 import { useAuth } from "../contexts/AuthContext";
-import { useChecks } from "../hooks/useChecks";
 import { api } from "../services/api";
 import FamilyBadge from "../components/FamilyBadge";
 import CheckRow from "../components/CheckRow";
@@ -13,10 +12,16 @@ function formatCurrency(amount) {
   return "\u20AA" + Number(amount || 0).toLocaleString();
 }
 
-export default function BundleDetailPage({ bundleId, bundle: bundleProp, onBack, onRefreshBundles }) {
+export default function BundleDetailPage({
+  bundleId,
+  bundle: bundleProp,
+  checks = [],
+  onBack,
+  onRefreshAll,
+  onAddCheckLocal,
+}) {
   const { t } = useLang();
   const { user } = useAuth();
-  const { checks, loading, refresh, addLocal } = useChecks(bundleId);
   const isAdmin = !!user;
 
   // If parent doesn't have the bundle data yet, fetch it ourselves
@@ -34,7 +39,7 @@ export default function BundleDetailPage({ bundleId, bundle: bundleProp, onBack,
   const isOpen = bundle?.status === "open";
 
   // Scan flow state
-  const [scanStep, setScanStep] = useState(null); // null | "capturing" | "reading" | "reviewing"
+  const [scanStep, setScanStep] = useState(null);
   const [imageData, setImageData] = useState(null);
   const [extractedData, setExtractedData] = useState(null);
   const [scanWarning, setScanWarning] = useState(null);
@@ -44,10 +49,6 @@ export default function BundleDetailPage({ bundleId, bundle: bundleProp, onBack,
   const [deleteCheckId, setDeleteCheckId] = useState(null);
   const [deleteBundleConfirm, setDeleteBundleConfirm] = useState(false);
   const [closeBundleConfirm, setCloseBundleConfirm] = useState(false);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
 
   const totalAmount = checks.reduce((s, c) => s + (Number(c.amount) || 0), 0);
 
@@ -63,7 +64,6 @@ export default function BundleDetailPage({ bundleId, bundle: bundleProp, onBack,
       if (result.warning) setScanWarning(result.warning);
       setScanStep("reviewing");
     } catch (err) {
-      // Let user fill manually
       setExtractedData({});
       setScanWarning(err.message);
       setScanStep("reviewing");
@@ -74,7 +74,7 @@ export default function BundleDetailPage({ bundleId, bundle: bundleProp, onBack,
     if (!imageData) return;
     setSaving(true);
 
-    // Build a local check object so UI updates immediately
+    // Build a local check so UI updates immediately
     const localCheck = {
       id: "temp-" + Date.now(),
       bundle_id: bundleId,
@@ -103,7 +103,7 @@ export default function BundleDetailPage({ bundleId, bundle: bundleProp, onBack,
     setImageData(null);
     setExtractedData(null);
     setSaving(false);
-    addLocal(localCheck);
+    if (onAddCheckLocal) onAddCheckLocal(localCheck);
 
     // Save to backend in the background
     try {
@@ -112,9 +112,9 @@ export default function BundleDetailPage({ bundleId, bundle: bundleProp, onBack,
       // GAS likely saved — response just corrupted on mobile
     }
 
-    // Try to refresh with real data from server (replaces temp check)
-    refresh();
-  }, [bundleId, imageData, checks.length, bundle, addLocal, refresh]);
+    // Try to refresh all data from server in background
+    if (onRefreshAll) onRefreshAll();
+  }, [bundleId, imageData, checks.length, bundle, onAddCheckLocal, onRefreshAll]);
 
   const cancelScan = () => {
     setScanStep(null);
@@ -126,31 +126,47 @@ export default function BundleDetailPage({ bundleId, bundle: bundleProp, onBack,
   // === Check actions ===
 
   const handleAdvance = async (checkId, recipientName) => {
-    await api.advanceCheck(checkId, recipientName);
-    await refresh();
+    try {
+      await api.advanceCheck(checkId, recipientName);
+    } catch {
+      // likely saved
+    }
+    if (onRefreshAll) onRefreshAll();
   };
 
   const handleDeleteCheck = async () => {
     if (!deleteCheckId) return;
-    await api.deleteCheck(deleteCheckId);
+    try {
+      await api.deleteCheck(deleteCheckId);
+    } catch {
+      // likely deleted
+    }
     setDeleteCheckId(null);
-    await refresh();
+    if (onRefreshAll) onRefreshAll();
   };
 
   // === Bundle actions ===
 
   const handleToggleBundle = async () => {
-    if (isOpen) {
-      await api.closeBundle(bundleId);
-    } else {
-      await api.reopenBundle(bundleId);
+    try {
+      if (isOpen) {
+        await api.closeBundle(bundleId);
+      } else {
+        await api.reopenBundle(bundleId);
+      }
+    } catch {
+      // likely saved
     }
     setCloseBundleConfirm(false);
-    if (onRefreshBundles) onRefreshBundles();
+    if (onRefreshAll) onRefreshAll();
   };
 
   const handleDeleteBundle = async () => {
-    await api.deleteBundle(bundleId);
+    try {
+      await api.deleteBundle(bundleId);
+    } catch {
+      // likely deleted
+    }
     setDeleteBundleConfirm(false);
     onBack();
   };
@@ -171,7 +187,7 @@ export default function BundleDetailPage({ bundleId, bundle: bundleProp, onBack,
         onClick={onBack}
         style={{ marginBottom: 12, paddingInlineStart: 0 }}
       >
-        \u2190 {t("back")}
+        {"\u2190"} {t("back")}
       </button>
 
       <div className="card" style={{ padding: 16, marginBottom: 16 }}>
@@ -180,11 +196,11 @@ export default function BundleDetailPage({ bundleId, bundle: bundleProp, onBack,
             <h2 style={{ fontSize: "1.2rem", marginBottom: 4 }}>{bundle.label}</h2>
             <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
               <span>{t(bundle.mode === "single" ? "singleName" : "alternating")}</span>
-              <span>\u2022</span>
+              <span>{"\u2022"}</span>
               <FamilyBadge family={bundle.checks_on_name} />
               {bundle.mode === "single" && (
                 <>
-                  <span>\u2022</span>
+                  <span>{"\u2022"}</span>
                   <span className="ltr-num">{bundle.split_ratio}%</span>
                 </>
               )}
@@ -239,11 +255,7 @@ export default function BundleDetailPage({ bundleId, bundle: bundleProp, onBack,
       )}
 
       {/* Checks list */}
-      {loading && checks.length === 0 ? (
-        <div style={{ textAlign: "center", padding: 32 }}>
-          <div className="spinner" style={{ width: 28, height: 28 }} />
-        </div>
-      ) : checks.length === 0 ? (
+      {checks.length === 0 ? (
         <div className="card" style={{ padding: 32, textAlign: "center", color: "var(--text-muted)" }}>
           <p style={{ fontSize: "1rem", marginBottom: 4 }}>{t("noChecksYet")}</p>
         </div>
@@ -293,7 +305,6 @@ export default function BundleDetailPage({ bundleId, bundle: bundleProp, onBack,
         />
       )}
 
-      {/* Delete check confirm */}
       {deleteCheckId && (
         <ConfirmDialog
           message={t("confirmDeleteCheck")}
@@ -303,7 +314,6 @@ export default function BundleDetailPage({ bundleId, bundle: bundleProp, onBack,
         />
       )}
 
-      {/* Close/reopen bundle confirm */}
       {closeBundleConfirm && (
         <ConfirmDialog
           message={t(isOpen ? "closeBundle" : "reopenBundle") + "?"}
@@ -312,7 +322,6 @@ export default function BundleDetailPage({ bundleId, bundle: bundleProp, onBack,
         />
       )}
 
-      {/* Delete bundle confirm */}
       {deleteBundleConfirm && (
         <ConfirmDialog
           message={t("confirmDeleteBundle")}
