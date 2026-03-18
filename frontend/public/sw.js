@@ -1,4 +1,4 @@
-const CACHE_NAME = "check-tracker-v2";
+const CACHE_NAME = "check-tracker-v3";
 const BASE = "/rent-check-tracker/";
 const STATIC_ASSETS = [BASE, BASE + "index.html", BASE + "manifest.json"];
 
