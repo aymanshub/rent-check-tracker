@@ -33,10 +33,10 @@ export default memo(function StatusPipeline({ flow, currentStatus }) {
                   width: isCurrent ? 32 : 28,
                   height: isCurrent ? 32 : 28,
                   borderRadius: "50%",
-                  background: isFuture ? "#f1f5f9" : color,
+                  background: isFuture ? "#e8e8e8" : color,
                   border: isCurrent
                     ? `3px solid ${color}`
-                    : `2px solid ${color}`,
+                    : `2px solid ${isFuture ? "#d1d5db" : color}`,
                   boxShadow: isCurrent ? `0 0 0 3px ${color}33` : "none",
                   display: "flex",
                   alignItems: "center",
@@ -44,6 +44,7 @@ export default memo(function StatusPipeline({ flow, currentStatus }) {
                   fontSize: isCurrent ? "0.8rem" : "0.7rem",
                   flexShrink: 0,
                   opacity: isPast ? 0.6 : 1,
+                  filter: isFuture ? "grayscale(1)" : "none",
                 }}
               >
                 {STATUS_ICONS[status]}
