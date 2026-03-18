@@ -3,6 +3,20 @@ import { useLang } from "../contexts/LangContext";
 import FamilyBadge from "./FamilyBadge";
 import ImageLightbox from "./ImageLightbox";
 
+// Convert YYYY-MM-DD → DD/MM/YYYY for display
+function toDisplay(isoDate) {
+  if (!isoDate) return "";
+  const m = isoDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : isoDate;
+}
+
+// Convert DD/MM/YYYY → YYYY-MM-DD for storage
+function toISO(displayDate) {
+  if (!displayDate) return "";
+  const m = displayDate.match(/^(\d{1,2})[\/\.\-](\d{1,2})[\/\.\-](\d{4})$/);
+  return m ? `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}` : displayDate;
+}
+
 export default function CheckScanReview({
   imagePreview,
   extractedData,
@@ -15,7 +29,7 @@ export default function CheckScanReview({
   const { t } = useLang();
   const [form, setForm] = useState({
     amount: extractedData?.amount || "",
-    deposit_date: extractedData?.deposit_date || "",
+    deposit_date: toDisplay(extractedData?.deposit_date || ""),
     check_number: extractedData?.check_number || "",
     bank_branch: extractedData?.bank_branch || "",
     account_number: extractedData?.account_number || "",
@@ -28,9 +42,14 @@ export default function CheckScanReview({
 
   const canConfirm = Number(form.amount) > 0 && (bundleMode !== "alternating" || form.issued_to);
 
+  // Convert date back to YYYY-MM-DD before sending to backend
+  const handleConfirm = () => {
+    onConfirm({ ...form, deposit_date: toISO(form.deposit_date) });
+  };
+
   const fields = [
     { key: "amount", label: t("amount"), type: "number", inputMode: "decimal", prefix: "\u20AA" },
-    { key: "deposit_date", label: t("depositDate"), type: "date" },
+    { key: "deposit_date", label: t("depositDate") + " (DD/MM/YYYY)", type: "text", inputMode: "numeric" },
     { key: "check_number", label: t("checkNumber"), type: "text" },
     { key: "bank_branch", label: t("bankBranch"), type: "text" },
     { key: "account_number", label: t("accountNumber"), type: "text" },
@@ -151,7 +170,7 @@ export default function CheckScanReview({
         <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
           <button
             className="btn btn-primary"
-            onClick={() => onConfirm(form)}
+            onClick={handleConfirm}
             disabled={!canConfirm || isSubmitting}
             style={{ flex: 1 }}
           >
