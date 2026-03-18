@@ -10,7 +10,10 @@ function formatCurrency(amount) {
 
 function formatDate(dateStr) {
   if (!dateStr) return "\u2014";
-  const [y, m, d] = dateStr.split("-");
+  // Handle ISO datetime strings from Google Sheets (e.g. "2025-03-15T22:00:00.000Z")
+  const clean = String(dateStr).split("T")[0];
+  const [y, m, d] = clean.split("-");
+  if (!y || !m || !d) return String(dateStr);
   return `${d}/${m}/${y}`;
 }
 
@@ -126,10 +129,15 @@ export default memo(function CheckRow({ check, bundle, onAdvance, onDelete, isAd
           {/* Pipeline */}
           <StatusPipeline flow={flow} currentStatus={check.status} />
 
-          {/* Draw amount for single mode */}
-          {check.draw_amount && Number(check.draw_amount) > 0 && (
+          {/* Draw amount — show as guide before drawn, and as record after */}
+          {bundle.mode === "single" && Number(bundle.split_ratio) > 0 && (
             <div style={{ fontSize: "0.75rem", color: "var(--accent)", marginTop: 4 }}>
-              {t("drawAmount")}: <span className="ltr-num">{formatCurrency(check.draw_amount)}</span>
+              {t("drawAmount")}: <span className="ltr-num">
+                {formatCurrency(check.draw_amount && Number(check.draw_amount) > 0
+                  ? check.draw_amount
+                  : Math.round(Number(check.amount) * Number(bundle.split_ratio) / 100)
+                )}
+              </span>
             </div>
           )}
 
@@ -179,7 +187,7 @@ export default memo(function CheckRow({ check, bundle, onAdvance, onDelete, isAd
 
           {isAdmin && isTerminal && (
             <div style={{ marginTop: 6, fontSize: "0.75rem", color: "var(--status-delivered)", fontWeight: 600 }}>
-              {t("completed")} \u2713
+              {t("completed")} {"\u2713"}
             </div>
           )}
         </div>

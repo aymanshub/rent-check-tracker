@@ -111,10 +111,18 @@ export default function CheckImageCrop({ imageDataUrl, onConfirm, onCancel }) {
             )}
           </button>
           <button
-            className="btn btn-outline"
             onClick={onCancel}
             disabled={processing}
-            style={{ flex: 1, color: "white", borderColor: "rgba(255,255,255,0.3)" }}
+            style={{
+              flex: 1,
+              padding: "10px 16px",
+              borderRadius: 8,
+              fontSize: "0.9rem",
+              fontWeight: 600,
+              color: "white",
+              background: "transparent",
+              border: "1.5px solid rgba(255,255,255,0.4)",
+            }}
           >
             {t("retake")}
           </button>
