@@ -302,6 +302,7 @@ export default function BundleDetailPage({
           imagePreview={imageData?.dataUrl}
           extractedData={extractedData}
           bundleMode={bundle.mode}
+          bundleFamily={bundle.checks_on_name}
           onConfirm={handleConfirmScan}
           onCancel={cancelScan}
           isSubmitting={saving}

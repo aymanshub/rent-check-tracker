@@ -21,19 +21,26 @@ export default function CheckScanReview({
   imagePreview,
   extractedData,
   bundleMode,
+  bundleFamily,
   onConfirm,
   onCancel,
   isSubmitting,
   warning,
 }) {
   const { t } = useLang();
+  // Pre-fill payee from bundle family name (more reliable than Gemini)
+  const familyNames = { george: t("familyGeorge"), asaad: t("familyAsaad") };
+  const defaultPayee = bundleMode === "single" && bundleFamily
+    ? familyNames[bundleFamily] || ""
+    : extractedData?.payee_name || "";
+
   const [form, setForm] = useState({
     amount: extractedData?.amount || "",
     deposit_date: toDisplay(extractedData?.deposit_date || ""),
     check_number: extractedData?.check_number || "",
     bank_branch: extractedData?.bank_branch || "",
     account_number: extractedData?.account_number || "",
-    payee_name: extractedData?.payee_name || "",
+    payee_name: defaultPayee,
     issued_to: "",
   });
   const [lightbox, setLightbox] = useState(false);
