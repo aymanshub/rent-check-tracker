@@ -5,6 +5,7 @@ import { api } from "../services/api";
 import FamilyBadge from "../components/FamilyBadge";
 import CheckRow from "../components/CheckRow";
 import CheckImageCapture from "../components/CheckImageCapture";
+import CheckImageCrop from "../components/CheckImageCrop";
 import CheckScanReview from "../components/CheckScanReview";
 import ConfirmDialog from "../components/ConfirmDialog";
 
@@ -37,9 +38,10 @@ export default function BundleDetailPage({
   const bundle = bundleProp || fetchedBundle;
   const isOpen = bundle?.status === "open";
 
-  // Scan flow state
+  // Scan flow state: null → cropping → reading → reviewing
   const [scanStep, setScanStep] = useState(null);
-  const [imageData, setImageData] = useState(null);
+  const [rawImageDataUrl, setRawImageDataUrl] = useState(null); // original capture for crop UI
+  const [imageData, setImageData] = useState(null); // cropped image for Gemini + upload
   const [extractedData, setExtractedData] = useState(null);
   const [scanWarning, setScanWarning] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -59,12 +61,20 @@ export default function BundleDetailPage({
 
   // === Scan flow handlers ===
 
-  const handleCapture = useCallback(async (compressed) => {
-    setImageData(compressed);
+  // Step 1: capture → show crop UI
+  const handleCapture = useCallback((compressed) => {
+    setRawImageDataUrl(compressed.dataUrl);
+    setScanStep("cropping");
+  }, []);
+
+  // Step 2: crop confirmed → send cropped image to Gemini
+  const handleCropConfirm = useCallback(async (cropped) => {
+    setImageData(cropped);
+    setRawImageDataUrl(null);
     setScanStep("reading");
     setScanWarning(null);
     try {
-      const result = await api.scanCheck(bundleId, compressed.base64, compressed.mimeType, prefillData);
+      const result = await api.scanCheck(bundleId, cropped.base64, cropped.mimeType, prefillData);
       setExtractedData(result.extracted || {});
       if (result.warning) setScanWarning(result.warning);
       setScanStep("reviewing");
@@ -123,6 +133,7 @@ export default function BundleDetailPage({
 
   const cancelScan = () => {
     setScanStep(null);
+    setRawImageDataUrl(null);
     setImageData(null);
     setExtractedData(null);
     setScanWarning(null);
@@ -295,6 +306,15 @@ export default function BundleDetailPage({
             {t("deleteBundle")}
           </button>
         </div>
+      )}
+
+      {/* Crop overlay */}
+      {scanStep === "cropping" && rawImageDataUrl && (
+        <CheckImageCrop
+          imageDataUrl={rawImageDataUrl}
+          onConfirm={handleCropConfirm}
+          onCancel={cancelScan}
+        />
       )}
 
       {/* Scan review overlay */}
