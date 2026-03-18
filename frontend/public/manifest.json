@@ -1,6 +1,7 @@
 {
-  "name": "دار جدي",
-  "short_name": "شيكات الإيجار",
+  // "name": "متتبع شيكات الإيجار",
+  "name": "متتبع دار جدي",
+  "short_name": "دار جدي",
   "description": "إدارة شيكات الإيجار العائلية",
   "start_url": "/rent-check-tracker/",
   "scope": "/rent-check-tracker/",
