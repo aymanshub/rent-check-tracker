@@ -2,8 +2,10 @@ import { GAS_URL } from "../config";
 
 /**
  * Makes a request to the Google Apps Script backend.
+ * Retries up to 3 times on corrupted responses (common on mobile
+ * due to GAS redirect chain).
  */
-export async function gasRequest(action, data = {}) {
+export async function gasRequest(action, data = {}, retries = 3) {
   const token = localStorage.getItem("id_token");
   if (!token) throw new Error("Not authenticated");
 
@@ -15,33 +17,51 @@ export async function gasRequest(action, data = {}) {
     redirect: "follow",
   };
 
-  let text = await doFetch(GAS_URL, fetchOpts);
+  let lastError;
 
-  // On mobile, GAS may return an HTML redirect page instead of JSON.
-  if (text.trimStart().startsWith("<")) {
-    const redirectUrl = extractRedirectUrl(text);
-    if (redirectUrl) {
-      text = await doFetch(redirectUrl, fetchOpts);
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      let text = await doFetch(GAS_URL, fetchOpts);
+
+      // On mobile, GAS may return an HTML redirect page instead of JSON.
+      if (text.trimStart().startsWith("<")) {
+        const redirectUrl = extractRedirectUrl(text);
+        if (redirectUrl) {
+          text = await doFetch(redirectUrl, fetchOpts);
+        }
+      }
+
+      if (text.trimStart().startsWith("<")) {
+        throw new Error("HTML response");
+      }
+
+      const result = JSON.parse(text);
+
+      if (result.error === "Unauthorized") {
+        localStorage.removeItem("id_token");
+        window.dispatchEvent(new Event("auth-expired"));
+        throw new Error("Token expired");
+      }
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      return result;
+    } catch (err) {
+      lastError = err;
+      // Don't retry auth errors
+      if (err.message === "Token expired" || err.message === "Not authenticated") {
+        throw err;
+      }
+      // Wait briefly before retrying
+      if (attempt < retries - 1) {
+        await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+      }
     }
   }
 
-  if (text.trimStart().startsWith("<")) {
-    throw new Error("Server returned an unexpected response. Please try again.");
-  }
-
-  const result = JSON.parse(text);
-
-  if (result.error === "Unauthorized") {
-    localStorage.removeItem("id_token");
-    window.dispatchEvent(new Event("auth-expired"));
-    throw new Error("Token expired");
-  }
-
-  if (result.error) {
-    throw new Error(result.error);
-  }
-
-  return result;
+  throw lastError;
 }
 
 async function doFetch(url, opts) {
