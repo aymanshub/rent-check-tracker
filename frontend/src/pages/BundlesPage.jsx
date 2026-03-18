@@ -19,12 +19,13 @@ export default function BundlesPage({ onNavigateBundle, checksCache }) {
   const handleCreate = async (data) => {
     setCreating(true);
     try {
-      const bundle = await create(data);
+      try {
+        await create(data);
+      } catch {
+        // GAS may save successfully but response corrupted on mobile
+      }
       setShowCreate(false);
       await refresh();
-      if (bundle?.id) {
-        onNavigateBundle(bundle.id);
-      }
     } catch (err) {
       alert(err.message);
     } finally {
