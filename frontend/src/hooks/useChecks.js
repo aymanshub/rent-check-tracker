@@ -20,6 +20,11 @@ export function useChecks(bundleId) {
     }
   }, [bundleId]);
 
+  // Add a check to local state immediately (optimistic update)
+  const addLocal = useCallback((checkData) => {
+    setChecks((prev) => [...prev, checkData]);
+  }, []);
+
   const advance = useCallback(async (checkId, recipientName) => {
     const result = await api.advanceCheck(checkId, recipientName);
     return result;
@@ -29,5 +34,5 @@ export function useChecks(bundleId) {
     await api.deleteCheck(checkId);
   }, []);
 
-  return { checks, loading, error, refresh, advance, remove };
+  return { checks, loading, error, refresh, advance, remove, addLocal };
 }

@@ -16,7 +16,7 @@ function formatCurrency(amount) {
 export default function BundleDetailPage({ bundleId, bundle: bundleProp, onBack, onRefreshBundles }) {
   const { t } = useLang();
   const { user } = useAuth();
-  const { checks, loading, refresh } = useChecks(bundleId);
+  const { checks, loading, refresh, addLocal } = useChecks(bundleId);
   const isAdmin = !!user;
 
   // If parent doesn't have the bundle data yet, fetch it ourselves
@@ -73,23 +73,48 @@ export default function BundleDetailPage({ bundleId, bundle: bundleProp, onBack,
   const handleConfirmScan = useCallback(async (confirmedData) => {
     if (!imageData) return;
     setSaving(true);
+
+    // Build a local check object so UI updates immediately
+    const localCheck = {
+      id: "temp-" + Date.now(),
+      bundle_id: bundleId,
+      order: checks.length + 1,
+      amount: Number(confirmedData.amount) || 0,
+      issued_to: confirmedData.issued_to || bundle?.checks_on_name || "",
+      status: "received",
+      deposit_date: confirmedData.deposit_date || "",
+      check_number: confirmedData.check_number || "",
+      bank_branch: confirmedData.bank_branch || "",
+      account_number: confirmedData.account_number || "",
+      payee_name: confirmedData.payee_name || "",
+      image_id: "",
+      image_url: "",
+      date_received: new Date().toISOString().split("T")[0],
+      date_handed: "",
+      date_deposited: "",
+      date_drawn: "",
+      date_delivered: "",
+      recipient_name: "",
+      draw_amount: "",
+    };
+
+    // Close review and add to UI immediately
+    setScanStep(null);
+    setImageData(null);
+    setExtractedData(null);
+    setSaving(false);
+    addLocal(localCheck);
+
+    // Save to backend in the background
     try {
-      try {
-        await api.confirmCheckData(bundleId, imageData.base64, imageData.mimeType, confirmedData);
-      } catch {
-        // GAS may save successfully but response gets corrupted on mobile.
-        // Refresh anyway since the data likely saved.
-      }
-      setScanStep(null);
-      setImageData(null);
-      setExtractedData(null);
-      await refresh();
-    } catch (err) {
-      alert(err.message);
-    } finally {
-      setSaving(false);
+      await api.confirmCheckData(bundleId, imageData.base64, imageData.mimeType, confirmedData);
+    } catch {
+      // GAS likely saved — response just corrupted on mobile
     }
-  }, [bundleId, imageData, refresh]);
+
+    // Try to refresh with real data from server (replaces temp check)
+    refresh();
+  }, [bundleId, imageData, checks.length, bundle, addLocal, refresh]);
 
   const cancelScan = () => {
     setScanStep(null);
