@@ -1,7 +1,9 @@
+import { APP_NAME } from "../config";
+
 const T = {
   en: {
     // App
-    appName: "Rent Check Tracker",
+    appName: APP_NAME.en,
     loading: "Loading...",
     error: "Error",
     retry: "Retry",
@@ -126,7 +128,7 @@ const T = {
   },
 
   ar: {
-    appName: "\u0645\u062A\u062A\u0628\u0639 \u0634\u064A\u0643\u0627\u062A \u0627\u0644\u0625\u064A\u062C\u0627\u0631",
+    appName: APP_NAME.ar,
     loading: "\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0645\u064A\u0644...",
     error: "\u062E\u0637\u0623",
     retry: "\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629",
@@ -241,7 +243,7 @@ const T = {
   },
 
   he: {
-    appName: "\u05DE\u05E2\u05E7\u05D1 \u05E6\'\u05E7\u05D9\u05DD",
+    appName: APP_NAME.he,
     loading: "\u05D8\u05D5\u05E2\u05DF...",
     error: "\u05E9\u05D2\u05D9\u05D0\u05D4",
     retry: "\u05E0\u05E1\u05D4 \u05E9\u05D5\u05D1",

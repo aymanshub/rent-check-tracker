@@ -13,6 +13,9 @@ export function LangProvider({ children }) {
     const dir = RTL_LANGS.includes(lang) ? "rtl" : "ltr";
     document.documentElement.setAttribute("lang", lang);
     document.documentElement.setAttribute("dir", dir);
+    // Update page title to match language
+    const appName = T[lang]?.appName || T.en.appName;
+    document.title = appName;
   }, [lang]);
 
   const t = (key) => T[lang]?.[key] || T.en[key] || key;
