@@ -129,8 +129,8 @@ export default memo(function CheckRow({ check, bundle, onAdvance, onDelete, isAd
           {/* Pipeline */}
           <StatusPipeline flow={flow} currentStatus={check.status} />
 
-          {/* Draw amount — visible as guide before drawn, actual value after */}
-          {bundle.mode === "single" && (() => {
+          {/* Draw amount — guide from deposited onwards, record after drawn */}
+          {bundle.mode === "single" && ["deposited", "drawn", "delivered"].includes(check.status) && (() => {
             const ratio = Number(bundle.split_ratio) || 50;
             const actual = check.draw_amount && Number(check.draw_amount) > 0 ? Number(check.draw_amount) : null;
             const estimated = Math.round(Number(check.amount) * ratio / 100);
