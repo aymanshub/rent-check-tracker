@@ -1,0 +1,193 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;600;700&family=Noto+Sans+Hebrew:wght@400;500;600;700&display=swap');
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg: #f5f0e8;
+  --bg-gradient: linear-gradient(135deg, #f5f0e8, #ede7db);
+  --card: #ffffff;
+  --primary: #1a6b5a;
+  --primary-light: #e8f5f0;
+  --accent: #c4993c;
+  --accent-light: #fdf6e8;
+  --text: #2c2c2c;
+  --text-muted: #7a7a7a;
+  --border: #e8e2d8;
+  --danger: #dc4444;
+  --george: #2563eb;
+  --asaad: #7c3aed;
+  --status-pending: #94a3b8;
+  --status-received: #3b82f6;
+  --status-handed: #8b5cf6;
+  --status-deposited: #f59e0b;
+  --status-drawn: #f97316;
+  --status-delivered: #10b981;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.06);
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--bg-gradient);
+  color: var(--text);
+  min-height: 100vh;
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Language-specific fonts */
+[lang="en"] body, [lang="en"] { font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, serif; }
+[lang="ar"] body, [lang="ar"] { font-family: 'Noto Sans Arabic', 'Segoe UI', sans-serif; }
+[lang="he"] body, [lang="he"] { font-family: 'Noto Sans Hebrew', 'Segoe UI', sans-serif; }
+
+/* RTL support */
+[dir="rtl"] { direction: rtl; text-align: right; }
+[dir="ltr"] { direction: ltr; text-align: left; }
+
+/* Numbers always LTR */
+.ltr-num { direction: ltr; unicode-bidi: isolate; }
+
+a { color: inherit; text-decoration: none; }
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+}
+
+input, select, textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* Card base */
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+/* Button base */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.15s ease;
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+}
+.btn-primary:hover { opacity: 0.9; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-danger {
+  background: var(--danger);
+  color: white;
+}
+.btn-danger:hover { opacity: 0.9; }
+
+.btn-outline {
+  border: 1.5px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+}
+.btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+
+.btn-ghost {
+  color: var(--text-muted);
+}
+.btn-ghost:hover { color: var(--text); background: var(--primary-light); }
+
+/* Form inputs */
+.input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  font-size: 0.95rem;
+  transition: border-color 0.15s;
+  min-height: 44px;
+}
+.input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+.input-warn {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+
+/* Spinner */
+.spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2.5px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Overlay */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+/* Page wrapper */
+.page {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 16px;
+  padding-bottom: 100px;
+}
+
+/* Mobile stat grid */
+.stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* Scrollable table wrapper */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Safe area for PWA */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .tab-bar { padding-bottom: env(safe-area-inset-bottom); }
+}
