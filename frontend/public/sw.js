@@ -1,11 +1,7 @@
-const CACHE_NAME = "check-tracker-v7";
+const CACHE_NAME = "check-tracker-v8";
 const BASE = "/rent-check-tracker/";
-const STATIC_ASSETS = [BASE, BASE + "index.html", BASE + "manifest.json"];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
-  );
   self.skipWaiting();
 });
 
@@ -24,6 +20,7 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   const url = event.request.url;
+
   // Don't cache API calls or Google services
   if (
     url.includes("script.google.com") ||
@@ -35,7 +32,43 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // Navigation requests (HTML): network-first, fall back to cache
+  if (event.request.mode === "navigate") {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          return response;
+        })
+        .catch(() => caches.match(BASE + "index.html"))
+    );
+    return;
+  }
+
+  // Static assets (JS/CSS/images): cache-first, fall back to network + cache it
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request))
+    caches.match(event.request).then((cached) => {
+      if (cached) return cached;
+      return fetch(event.request)
+        .then((response) => {
+          // Cache successful responses for static assets
+          if (response.ok && url.includes("/assets/")) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return response;
+        })
+        .catch(() => {
+          // If a JS/CSS chunk fails to load (old hash gone), force reload
+          if (url.match(/\.(js|css)$/)) {
+            return new Response("", {
+              status: 302,
+              headers: { Location: BASE },
+            });
+          }
+          return new Response("Offline", { status: 503 });
+        });
+    })
   );
 });
