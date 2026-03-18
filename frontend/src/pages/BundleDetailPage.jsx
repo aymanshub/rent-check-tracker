@@ -87,6 +87,29 @@ export default function BundleDetailPage({
 
   const handleConfirmScan = useCallback(async (confirmedData) => {
     if (!imageData) return;
+
+    // Duplicate detection: check if same check_number or same amount+date already exists
+    const num = (confirmedData.check_number || "").trim();
+    const amt = Number(confirmedData.amount) || 0;
+    const date = (confirmedData.deposit_date || "").trim();
+
+    if (num) {
+      const dupByNumber = checks.find((c) => String(c.check_number).trim() === num);
+      if (dupByNumber) {
+        alert(t("duplicateCheckNumber") || `Check #${num} already exists in this bundle.`);
+        return;
+      }
+    }
+    if (amt > 0 && date) {
+      const dupByAmountDate = checks.find(
+        (c) => Number(c.amount) === amt && String(c.deposit_date).split("T")[0] === date
+      );
+      if (dupByAmountDate) {
+        const proceed = confirm(t("duplicateCheckWarning") || `A check with the same amount (${amt}) and date (${date}) already exists. Add anyway?`);
+        if (!proceed) return;
+      }
+    }
+
     setSaving(true);
 
     // Build a local check so UI updates immediately
@@ -129,7 +152,7 @@ export default function BundleDetailPage({
 
     // Try to refresh all data from server in background
     if (onRefreshAll) onRefreshAll();
-  }, [bundleId, imageData, checks.length, bundle, onAddCheckLocal, onRefreshAll]);
+  }, [bundleId, imageData, checks, bundle, onAddCheckLocal, onRefreshAll, t]);
 
   const cancelScan = () => {
     setScanStep(null);
