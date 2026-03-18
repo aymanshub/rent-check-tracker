@@ -8,5 +8,5 @@ export const APP_NAME = {
   ar: "متتبع دار جدي",
   he: "\u05DE\u05E2\u05E7\u05D1 \u05E6'\u05E7\u05D9\u05DD",
   // Short name shown under the mobile home screen icon (Android + iOS)
-  short: "دار جدي",
+  short: "دار سيدي",
 };
