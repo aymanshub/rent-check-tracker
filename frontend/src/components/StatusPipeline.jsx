@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { useLang } from "../contexts/LangContext";
 import { STATUS_COLORS } from "../styles/theme";
 
 const STATUS_ICONS = {
@@ -11,34 +12,57 @@ const STATUS_ICONS = {
 };
 
 export default memo(function StatusPipeline({ flow, currentStatus }) {
+  const { t } = useLang();
   const currentIdx = flow.indexOf(currentStatus);
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
+    <div style={{ display: "flex", alignItems: "flex-start", gap: 0 }}>
       {flow.map((status, i) => {
-        const achieved = i <= currentIdx;
-        const color = achieved ? STATUS_COLORS[status] : "#d1d5db";
+        const isCurrent = i === currentIdx;
+        const isPast = i < currentIdx;
+        const isFuture = i > currentIdx;
+        const color = !isFuture ? STATUS_COLORS[status] : "#d1d5db";
         const isLast = i === flow.length - 1;
 
         return (
-          <div key={status} style={{ display: "flex", alignItems: "center" }}>
-            {/* Circle */}
-            <div
-              title={status}
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: "50%",
-                background: achieved ? color : "#f1f5f9",
-                border: `2px solid ${color}`,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "0.7rem",
-                flexShrink: 0,
-              }}
-            >
-              {achieved ? STATUS_ICONS[status] : ""}
+          <div key={status} style={{ display: "flex", alignItems: "flex-start" }}>
+            {/* Circle + label column */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <div
+                style={{
+                  width: isCurrent ? 32 : 28,
+                  height: isCurrent ? 32 : 28,
+                  borderRadius: "50%",
+                  background: isFuture ? "#f1f5f9" : color,
+                  border: isCurrent
+                    ? `3px solid ${color}`
+                    : `2px solid ${color}`,
+                  boxShadow: isCurrent ? `0 0 0 3px ${color}33` : "none",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: isCurrent ? "0.8rem" : "0.7rem",
+                  flexShrink: 0,
+                  opacity: isPast ? 0.6 : 1,
+                }}
+              >
+                {STATUS_ICONS[status]}
+              </div>
+              {/* Text label under current step only */}
+              {isCurrent && (
+                <div
+                  style={{
+                    fontSize: "0.6rem",
+                    fontWeight: 700,
+                    color: color,
+                    marginTop: 3,
+                    whiteSpace: "nowrap",
+                    textAlign: "center",
+                  }}
+                >
+                  {t(status)}
+                </div>
+              )}
             </div>
             {/* Connecting line */}
             {!isLast && (
@@ -46,8 +70,10 @@ export default memo(function StatusPipeline({ flow, currentStatus }) {
                 style={{
                   width: 16,
                   height: 2,
-                  background: i < currentIdx ? STATUS_COLORS[flow[i + 1]] : "#d1d5db",
+                  background: isPast ? STATUS_COLORS[flow[i + 1]] : "#d1d5db",
                   flexShrink: 0,
+                  marginTop: isCurrent ? 15 : 13,
+                  opacity: isPast ? 0.6 : 1,
                 }}
               />
             )}

@@ -27,9 +27,9 @@ var CONFIG = {
     DELIVERED: "delivered",
   },
   FLOWS: {
-    ALTERNATING_OWN:   ["pending", "received", "deposited"],
-    ALTERNATING_OTHER: ["pending", "received", "handed_over"],
-    SINGLE:            ["pending", "received", "deposited", "drawn", "delivered"],
+    ALTERNATING_OWN:   ["received", "deposited"],
+    ALTERNATING_OTHER: ["received", "handed_over"],
+    SINGLE:            ["received", "deposited", "drawn", "delivered"],
   },
   // Column headers for each sheet (order matters — matches sheet columns)
   HEADERS: {

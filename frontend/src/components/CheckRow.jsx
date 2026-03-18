@@ -20,10 +20,10 @@ function formatDate(dateStr) {
 function getFlow(check, bundle) {
   if (bundle.mode === "alternating") {
     return check.issued_to === bundle.checks_on_name
-      ? ["pending", "received", "deposited"]
-      : ["pending", "received", "handed_over"];
+      ? ["received", "deposited"]
+      : ["received", "handed_over"];
   }
-  return ["pending", "received", "deposited", "drawn", "delivered"];
+  return ["received", "deposited", "drawn", "delivered"];
 }
 
 function getNextAction(check, bundle, t) {
