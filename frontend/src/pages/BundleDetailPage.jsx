@@ -13,11 +13,24 @@ function formatCurrency(amount) {
   return "\u20AA" + Number(amount || 0).toLocaleString();
 }
 
-export default function BundleDetailPage({ bundleId, bundle, onBack, onRefreshBundles }) {
+export default function BundleDetailPage({ bundleId, bundle: bundleProp, onBack, onRefreshBundles }) {
   const { t } = useLang();
   const { user } = useAuth();
   const { checks, loading, refresh } = useChecks(bundleId);
   const isAdmin = !!user;
+
+  // If parent doesn't have the bundle data yet, fetch it ourselves
+  const [fetchedBundle, setFetchedBundle] = useState(null);
+  useEffect(() => {
+    if (!bundleProp && bundleId) {
+      api.bundles().then((res) => {
+        const found = (res.bundles || []).find((b) => b.id === bundleId);
+        if (found) setFetchedBundle(found);
+      }).catch(() => {});
+    }
+  }, [bundleProp, bundleId]);
+
+  const bundle = bundleProp || fetchedBundle;
   const isOpen = bundle?.status === "open";
 
   // Scan flow state
