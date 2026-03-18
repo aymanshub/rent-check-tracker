@@ -18,6 +18,7 @@ export default function BundleDetailPage({
   bundle: bundleProp,
   checks = [],
   allChecks = [],
+  allBundles = [],
   onBack,
   onRefreshAll,
   onAddCheckLocal,
@@ -97,7 +98,18 @@ export default function BundleDetailPage({
     if (num) {
       const dupByNumber = allChecks.find((c) => String(c.check_number).trim() === num);
       if (dupByNumber) {
-        alert(t("duplicateCheckNumber"));
+        const dupBundle = allBundles.find((b) => b.id === dupByNumber.bundle_id);
+        const dupAmount = "\u20AA" + Number(dupByNumber.amount || 0).toLocaleString();
+        const dupDate = dupByNumber.deposit_date ? String(dupByNumber.deposit_date).split("T")[0] : "";
+        const details = [
+          `${t("duplicateCheckNumber")}`,
+          "",
+          `${t("checkNumber")}: ${num}`,
+          `${t("amount")}: ${dupAmount}`,
+          dupDate ? `${t("depositDate")}: ${dupDate}` : "",
+          dupBundle ? `${t("bundleLabel")}: ${dupBundle.label}` : "",
+        ].filter(Boolean).join("\n");
+        alert(details);
         return;
       }
     }
@@ -106,8 +118,15 @@ export default function BundleDetailPage({
         (c) => Number(c.amount) === amt && String(c.deposit_date).split("T")[0] === date
       );
       if (dupByAmountDate) {
-        const proceed = confirm(t("duplicateCheckWarning") || `A check with the same amount (${amt}) and date (${date}) already exists. Add anyway?`);
-        if (!proceed) return;
+        const dupAmount = "\u20AA" + amt.toLocaleString();
+        const details = [
+          t("duplicateCheckWarning"),
+          "",
+          `${t("amount")}: ${dupAmount}`,
+          `${t("depositDate")}: ${date}`,
+          dupByAmountDate.check_number ? `${t("checkNumber")}: ${dupByAmountDate.check_number}` : "",
+        ].filter(Boolean).join("\n");
+        if (!confirm(details)) return;
       }
     }
 
