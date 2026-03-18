@@ -129,17 +129,17 @@ export default memo(function CheckRow({ check, bundle, onAdvance, onDelete, isAd
           {/* Pipeline */}
           <StatusPipeline flow={flow} currentStatus={check.status} />
 
-          {/* Draw amount — show as guide before drawn, and as record after */}
-          {bundle.mode === "single" && Number(bundle.split_ratio) > 0 && (
-            <div style={{ fontSize: "0.75rem", color: "var(--accent)", marginTop: 4 }}>
-              {t("drawAmount")}: <span className="ltr-num">
-                {formatCurrency(check.draw_amount && Number(check.draw_amount) > 0
-                  ? check.draw_amount
-                  : Math.round(Number(check.amount) * Number(bundle.split_ratio) / 100)
-                )}
-              </span>
-            </div>
-          )}
+          {/* Draw amount — visible as guide before drawn, actual value after */}
+          {bundle.mode === "single" && (() => {
+            const ratio = Number(bundle.split_ratio) || 50;
+            const actual = check.draw_amount && Number(check.draw_amount) > 0 ? Number(check.draw_amount) : null;
+            const estimated = Math.round(Number(check.amount) * ratio / 100);
+            return (
+              <div style={{ fontSize: "0.75rem", color: "var(--accent)", marginTop: 4 }}>
+                {t("drawAmount")}: <span className="ltr-num">{formatCurrency(actual || estimated)}</span>
+              </div>
+            );
+          })()}
 
           {/* Recipient */}
           {check.recipient_name && (
