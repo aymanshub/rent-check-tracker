@@ -1,4 +1,4 @@
-const CACHE_NAME = "check-tracker-v1";
+const CACHE_NAME = "check-tracker-v2";
 const BASE = "/rent-check-tracker/";
 const STATIC_ASSETS = [BASE, BASE + "index.html", BASE + "manifest.json"];
 
@@ -23,10 +23,17 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  // Don't cache API calls
-  if (event.request.url.includes("script.google.com")) return;
-  if (event.request.url.includes("googleapis.com")) return;
-  if (event.request.url.includes("accounts.google.com")) return;
+  const url = event.request.url;
+  // Don't cache API calls or Google services
+  if (
+    url.includes("script.google.com") ||
+    url.includes("script.googleusercontent.com") ||
+    url.includes("googleapis.com") ||
+    url.includes("accounts.google.com") ||
+    url.includes("googleusercontent.com")
+  ) {
+    return;
+  }
 
   event.respondWith(
     caches.match(event.request).then((cached) => cached || fetch(event.request))

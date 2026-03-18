@@ -1,16 +1,42 @@
 import { GAS_URL } from "../config";
 
+/**
+ * Makes a request to the Google Apps Script backend.
+ *
+ * GAS web apps return a 302 redirect. On mobile browsers, POST requests
+ * get downgraded to GET on redirect (per HTTP spec), causing Google to
+ * return an HTML page instead of JSON. We detect this and follow the
+ * redirect URL manually with a fresh POST.
+ */
 export async function gasRequest(action, data = {}) {
   const token = localStorage.getItem("id_token");
   if (!token) throw new Error("Not authenticated");
 
-  const response = await fetch(GAS_URL, {
+  const payload = JSON.stringify({ token, action, ...data });
+  const fetchOpts = {
     method: "POST",
     headers: { "Content-Type": "text/plain" },
-    body: JSON.stringify({ token, action, ...data }),
-  });
+    body: payload,
+    redirect: "follow",
+  };
 
-  const result = await response.json();
+  let text = await doFetch(GAS_URL, fetchOpts);
+
+  // On mobile, GAS may return an HTML redirect page instead of JSON.
+  // Extract the redirect URL and retry with a fresh POST.
+  if (text.trimStart().startsWith("<")) {
+    const redirectUrl = extractRedirectUrl(text);
+    if (redirectUrl) {
+      text = await doFetch(redirectUrl, fetchOpts);
+    }
+  }
+
+  // Still HTML? Fail gracefully.
+  if (text.trimStart().startsWith("<")) {
+    throw new Error("Server returned an unexpected response. Please try again.");
+  }
+
+  const result = JSON.parse(text);
 
   if (result.error === "Unauthorized") {
     localStorage.removeItem("id_token");
@@ -23,6 +49,29 @@ export async function gasRequest(action, data = {}) {
   }
 
   return result;
+}
+
+async function doFetch(url, opts) {
+  const response = await fetch(url, opts);
+  return response.text();
+}
+
+/**
+ * GAS HTML redirect pages contain a URL in either:
+ *   - A meta refresh tag: <meta http-equiv="refresh" content="0; url=...">
+ *   - An anchor tag: <a href="...">
+ * Extract and return it.
+ */
+function extractRedirectUrl(html) {
+  // Try meta refresh
+  const metaMatch = html.match(/content=["'][^"']*url=([^"'\s>]+)/i);
+  if (metaMatch) return metaMatch[1].replace(/&amp;/g, "&");
+
+  // Try anchor href
+  const hrefMatch = html.match(/href="([^"]+)"/);
+  if (hrefMatch) return hrefMatch[1].replace(/&amp;/g, "&");
+
+  return null;
 }
 
 export const api = {
